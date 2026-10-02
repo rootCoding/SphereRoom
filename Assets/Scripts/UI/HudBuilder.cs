@@ -19,7 +19,7 @@ namespace SphereRoom.UI
     /// </summary>
     public static class HudBuilder
     {
-        public static PlayerHUD Build(StaminaSystem stamina)
+        public static PlayerHUD Build(StaminaSystem stamina, bool showSteamInvite)
         {
             GameObject hudRoot = new GameObject("PlayerHUD");
             Canvas canvas = hudRoot.AddComponent<Canvas>();
@@ -101,18 +101,18 @@ namespace SphereRoom.UI
             menu.transform.SetParent(hudRoot.transform, false);
             RectTransform menuRt = menu.GetComponent<RectTransform>();
             menuRt.anchorMin = menuRt.anchorMax = new Vector2(0.5f, 0.5f);
-            menuRt.sizeDelta = new Vector2(360f, 340f);
+            menuRt.sizeDelta = new Vector2(360f, 430f);
             menuRt.anchoredPosition = Vector2.zero;
 
             // 描边底 + 面板底（先创建的在下层）
-            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 346f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 436f), Vector2.zero,
                 new Color(0.45f, 0.62f, 0.9f, 0.45f));
-            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 340f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 430f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
-            TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 130f));
+            TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 150f));
             title.color = new Color(0.88f, 0.92f, 1f);
-            UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 106f),
+            UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 126f),
                 new Color(0.45f, 0.62f, 0.9f, 0.8f));
 
             Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 48f);
@@ -158,12 +158,15 @@ namespace SphereRoom.UI
             quitButton.colors = quitColors;
             UiFactory.CreateText(quitRt, "Label", "退出游戏", 22, new Vector2(200f, 44f), Vector2.zero);
 
+            // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板）
+            Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
+
             menu.SetActive(false);
 
             // ---- 接线 ----
             PlayerHUD hud = hudRoot.AddComponent<PlayerHUD>();
             hud.Initialize(staminaFill, staminaText, stamina, crosshair, helpPanel, menu,
-                crosshairToggle, helpToggle, button, tappedText, quitButton);
+                crosshairToggle, helpToggle, button, tappedText, quitButton, inviteButton);
             return hud;
         }
 
@@ -188,6 +191,31 @@ namespace SphereRoom.UI
             descRt.pivot = new Vector2(0f, 1f);
             descRt.anchoredPosition = new Vector2(iconWidth + 10f, y);
             desc.alignment = TextAlignmentOptions.MidlineLeft;
+        }
+
+        /// <summary>「邀请 Steam 好友」按钮（绿色系，Steam 模式才激活，位于退出按钮下方）。</summary>
+        private static Button CreateSteamInviteButton(Transform parent, bool showSteamInvite)
+        {
+            GameObject inviteGo = new GameObject("SteamInviteButton", typeof(RectTransform));
+            inviteGo.transform.SetParent(parent, false);
+            RectTransform inviteRt = inviteGo.GetComponent<RectTransform>();
+            inviteRt.anchorMin = inviteRt.anchorMax = new Vector2(0.5f, 0.5f);
+            inviteRt.sizeDelta = new Vector2(200f, 44f);
+            inviteRt.anchoredPosition = new Vector2(0f, -178f);
+            Image inviteBg = inviteGo.AddComponent<Image>();
+            inviteBg.color = new Color(0.25f, 0.5f, 0.35f);
+            Button inviteButton = inviteGo.AddComponent<Button>();
+            inviteButton.targetGraphic = inviteBg;
+            ColorBlock inviteColors = inviteButton.colors;
+            inviteColors.normalColor = new Color(0.25f, 0.5f, 0.35f);
+            inviteColors.highlightedColor = new Color(0.36f, 0.64f, 0.47f);
+            inviteColors.pressedColor = new Color(0.16f, 0.35f, 0.24f);
+            inviteColors.selectedColor = inviteColors.highlightedColor;
+            inviteColors.fadeDuration = 0.08f;
+            inviteButton.colors = inviteColors;
+            UiFactory.CreateText(inviteRt, "Label", "邀请 Steam 好友", 20, new Vector2(200f, 44f), Vector2.zero);
+            inviteGo.SetActive(showSteamInvite);
+            return inviteButton;
         }
 
         /// <summary>创建菜单开关行（勾选框 + 标签），返回 Toggle。</summary>

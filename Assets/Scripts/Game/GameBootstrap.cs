@@ -26,6 +26,8 @@ namespace SphereRoom.Game
             _lobby.ForcedExit += OnForcedExit;
             _network.ConnectionStopped += OnConnectionStopped;
             _network.Status += _lobby.SetStatus;
+            // 接受 Steam 好友邀请自动加入：把大厅 UI 切到 Steam 模式
+            _network.SteamModeRequested += () => _lobby.SetSteamMode(true);
         }
 
         /// <summary>由 LocalPlayerSetup 调用：本地玩家生成完成 → 隐藏大厅 + 构建（或重建）HUD。</summary>
@@ -36,7 +38,8 @@ namespace SphereRoom.Game
                 Destroy(_hud.gameObject);
             }
             _lobby.Hide();
-            _hud = HudBuilder.Build(stamina);
+            _hud = HudBuilder.Build(stamina, _network.Mode == NetMode.Steam);
+            _hud.InviteClicked += () => _network.InviteFriends();
         }
 
         private void OnConnectionStopped(bool byHost, string message)

@@ -103,6 +103,16 @@ namespace SphereRoom.Networking
             }
         }
 
+        /// <summary>
+        /// Play 启动即初始化 Steam（而非等到开房时）：
+        /// 好友邀请回调（OnGameLobbyJoinRequested）只在 Steam API 已初始化时才会收到，
+        /// 局域网模式的玩家也必须能「接受邀请」自动加入 Steam 房间。
+        /// </summary>
+        private void Awake()
+        {
+            TryInitSteam();
+        }
+
         /// <summary>接受对方发起的 P2P 会话请求（Steam P2P 收发数据的前提）。</summary>
         private void AcceptSession(SteamId id)
         {

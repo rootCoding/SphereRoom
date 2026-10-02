@@ -108,11 +108,11 @@ namespace SphereRoom.UI
             Show();
         }
 
-        /// <summary>按当前联机方式刷新大厅 UI（Steam 模式隐藏端口、输入框变主机 SteamID）。</summary>
+        /// <summary>按当前联机方式刷新大厅 UI（Steam 模式隐藏端口、输入框变大厅 ID）。</summary>
         private void ApplyModeUI()
         {
             _modeButtonLabel.text = _steamMode ? "联机方式：Steam 联机" : "联机方式：局域网直连";
-            _ipLabel.text = _steamMode ? "主机 SteamID" : "主机 IP";
+            _ipLabel.text = _steamMode ? "大厅 ID" : "主机 IP";
             _portLabelGo.SetActive(!_steamMode);
             _portField.gameObject.SetActive(!_steamMode);
             _hostButtonLabel.text = _steamMode ? "创建房间（Steam）" : "创建房间";
@@ -122,13 +122,24 @@ namespace SphereRoom.UI
                 // 暂存 IP 文本，切回局域网时还原
                 _utpIpText = _ipField.text;
                 _ipField.text = string.Empty;
-                _ipPlaceholder.text = "输入主机 SteamID64";
+                _ipPlaceholder.text = "输入大厅 ID（19 位数字）";
             }
             else
             {
                 _ipField.text = string.IsNullOrWhiteSpace(_utpIpText) ? "127.0.0.1" : _utpIpText;
                 _ipPlaceholder.text = "例如 127.0.0.1";
             }
+        }
+
+        /// <summary>程序化切换联机方式（接受 Steam 好友邀请时由 GameBootstrap 调用），不触发 OnModeChanged。</summary>
+        public void SetSteamMode(bool steam)
+        {
+            if (_steamMode == steam)
+            {
+                return;
+            }
+            _steamMode = steam;
+            ApplyModeUI();
         }
 
         /// <summary>主机断开：弹出对话框；点「确认」立即回主页面，不点 5 秒后自动回。</summary>

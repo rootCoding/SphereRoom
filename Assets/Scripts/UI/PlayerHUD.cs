@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -15,6 +16,9 @@ namespace SphereRoom.UI
     /// </summary>
     public class PlayerHUD : MonoBehaviour
     {
+        /// <summary>点击「邀请 Steam 好友」（由 GameBootstrap 接到 NetworkBootstrap 打开 Steam 邀请面板）。</summary>
+        public event Action InviteClicked;
+
         private static readonly Color StaminaGreen = new Color(0.3f, 0.85f, 0.4f);
         private static readonly Color StaminaYellow = new Color(0.9f, 0.8f, 0.2f);
         private static readonly Color StaminaRed = new Color(0.9f, 0.25f, 0.2f);
@@ -29,6 +33,7 @@ namespace SphereRoom.UI
         private Toggle _helpToggle;
         private Button _resumeButton;
         private Button _quitButton;
+        private Button _inviteButton;
         private TextMeshProUGUI _tappedText;
         private Coroutine _tappedCoroutine;
 
@@ -41,7 +46,7 @@ namespace SphereRoom.UI
         public void Initialize(Image staminaFill, TextMeshProUGUI staminaText, StaminaSystem stamina,
             GameObject crosshair, GameObject helpPanel, GameObject menuPanel,
             Toggle crosshairToggle, Toggle helpToggle, Button resumeButton, TextMeshProUGUI tappedText,
-            Button quitButton)
+            Button quitButton, Button inviteButton = null)
         {
             _staminaFill = staminaFill;
             _staminaText = staminaText;
@@ -54,6 +59,7 @@ namespace SphereRoom.UI
             _resumeButton = resumeButton;
             _tappedText = tappedText;
             _quitButton = quitButton;
+            _inviteButton = inviteButton;
             _initialized = true;
 
             if (_stamina != null)
@@ -68,6 +74,10 @@ namespace SphereRoom.UI
             _helpToggle.onValueChanged.AddListener(ShowHelp);
             _resumeButton.onClick.AddListener(Resume);
             _quitButton.onClick.AddListener(QuitGame);
+            if (_inviteButton != null)
+            {
+                _inviteButton.onClick.AddListener(() => InviteClicked?.Invoke());
+            }
         }
 
         private void Start()
@@ -195,6 +205,10 @@ namespace SphereRoom.UI
             if (_quitButton != null)
             {
                 _quitButton.onClick.RemoveListener(QuitGame);
+            }
+            if (_inviteButton != null)
+            {
+                _inviteButton.onClick.RemoveAllListeners();
             }
         }
     }
