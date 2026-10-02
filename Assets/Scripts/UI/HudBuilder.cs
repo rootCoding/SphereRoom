@@ -187,16 +187,17 @@ namespace SphereRoom.UI
             noticeDialog.transform.SetParent(hudRoot.transform, false);
             RectTransform noticeRt = noticeDialog.GetComponent<RectTransform>();
             noticeRt.anchorMin = noticeRt.anchorMax = new Vector2(0.5f, 0.5f);
-            noticeRt.sizeDelta = new Vector2(420f, 180f);
+            noticeRt.sizeDelta = new Vector2(560f, 200f);
             noticeRt.anchoredPosition = Vector2.zero;
 
-            UiFactory.CreateImage(noticeRt, "Border", new Vector2(426f, 186f), Vector2.zero,
+            UiFactory.CreateImage(noticeRt, "Border", new Vector2(566f, 206f), Vector2.zero,
                 new Color(0.8f, 0.4f, 0.35f, 0.6f));
-            UiFactory.CreateImage(noticeRt, "Background", new Vector2(420f, 180f), Vector2.zero,
+            UiFactory.CreateImage(noticeRt, "Background", new Vector2(560f, 200f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
-            TextMeshProUGUI noticeText = UiFactory.CreateText(noticeRt, "Text", "", 24,
-                new Vector2(380f, 60f), new Vector2(0f, 25f));
+            TextMeshProUGUI noticeText = UiFactory.CreateText(noticeRt, "Text", "", 22,
+                new Vector2(520f, 84f), new Vector2(0f, 22f));
+            noticeText.alignment = TextAlignmentOptions.Midline;
             noticeText.color = new Color(1f, 0.75f, 0.65f);
 
             GameObject confirmGo = new GameObject("NoticeConfirmButton", typeof(RectTransform));
@@ -204,7 +205,7 @@ namespace SphereRoom.UI
             RectTransform confirmRt = confirmGo.GetComponent<RectTransform>();
             confirmRt.anchorMin = confirmRt.anchorMax = new Vector2(0.5f, 0.5f);
             confirmRt.sizeDelta = new Vector2(140f, 44f);
-            confirmRt.anchoredPosition = new Vector2(0f, -50f);
+            confirmRt.anchoredPosition = new Vector2(0f, -58f);
             Image confirmBg = confirmGo.AddComponent<Image>();
             confirmBg.color = new Color(0.25f, 0.55f, 0.95f);
             Button noticeConfirm = confirmGo.AddComponent<Button>();
