@@ -161,23 +161,23 @@ namespace SphereRoom.UI
             // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板），位于「继续游戏」上方
             Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
 
-            // 大厅 ID 行（仅 Steam 联机模式显示）：仿大厅页样式——框外右侧对齐的描述「大厅ID」+ 框内纯数字 + 「复制」按钮
+            // 大厅 ID 行（仅 Steam 联机模式显示）：三层结构 ——「大厅ID」描述 + 数字展示框 + 「复制」按钮，整体居中
             TextMeshProUGUI lobbyIdText = null;
             Button copyButton = null;
             if (showSteamInvite)
             {
                 TextMeshProUGUI lobbyIdLabel = UiFactory.CreateText(menuRt, "LobbyIdLabel", "大厅ID", 14,
-                    new Vector2(60f, 34f), new Vector2(-141f, 88f));
+                    new Vector2(60f, 34f), new Vector2(-130f, 88f));
                 lobbyIdLabel.alignment = TextAlignmentOptions.MidlineRight;
                 lobbyIdLabel.color = new Color(0.8f, 0.85f, 0.9f);
-                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(202f, 34f), new Vector2(-64f, 88f),
+                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(162f, 34f), new Vector2(-13f, 88f),
                     new Color(0f, 0f, 0f, 0.45f));
                 // 纯数字文本（复制时只复制这里的内容）
                 lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "", 14,
-                    new Vector2(186f, 34f), new Vector2(-64f, 88f));
+                    new Vector2(146f, 34f), new Vector2(-13f, 88f));
                 lobbyIdText.alignment = TextAlignmentOptions.MidlineLeft;
                 lobbyIdText.color = new Color(0.9f, 0.93f, 0.96f);
-                copyButton = CreateCopyButton(menuRt, new Vector2(128f, 88f));
+                copyButton = CreateCopyButton(menuRt, new Vector2(118f, 88f));
             }
 
             menu.SetActive(false);
