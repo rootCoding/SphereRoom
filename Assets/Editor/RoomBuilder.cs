@@ -83,34 +83,9 @@ namespace SphereRoom.EditorTools
             go.isStatic = true;
 
             Renderer renderer = go.GetComponent<Renderer>();
-            renderer.sharedMaterial = GetOrCreateMaterial(color, name);
+            renderer.sharedMaterial = EditorMaterialHelper.GetOrCreateMaterial(color, name);
             return go;
         }
 
-        private static Material GetOrCreateMaterial(Color color, string name)
-        {
-            const string dir = "Assets/Materials";
-            if (!AssetDatabase.IsValidFolder(dir))
-            {
-                AssetDatabase.CreateFolder("Assets", "Materials");
-            }
-
-            string path = $"{dir}/M_{name}.mat";
-            Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null)
-                {
-                    shader = Shader.Find("Standard");
-                }
-                material = new Material(shader) { name = $"M_{name}" };
-                AssetDatabase.CreateAsset(material, path);
-            }
-
-            material.color = color;
-            EditorUtility.SetDirty(material);
-            return material;
-        }
     }
 }
