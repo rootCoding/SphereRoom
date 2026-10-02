@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Unity.Netcode;
 
 namespace SphereRoom.Player
 {
@@ -28,6 +29,7 @@ namespace SphereRoom.Player
         private CharacterController _controller;
         private Camera _camera;
         private StaminaSystem _stamina;
+        private NetworkObject _networkObject;
         private float _pitch;              // 相机俯仰角（度）
         private float _verticalVelocity;   // 垂直速度（贴地保持小负值，保证 isGrounded）
 
@@ -36,6 +38,7 @@ namespace SphereRoom.Player
             _controller = GetComponent<CharacterController>();
             _camera = GetComponentInChildren<Camera>();
             _stamina = GetComponent<StaminaSystem>();
+            _networkObject = GetComponent<NetworkObject>();
         }
 
         private void Start()
@@ -51,8 +54,24 @@ namespace SphereRoom.Player
 
         private void Update()
         {
+            // 网络模式：仅本地玩家（owner）处理输入，其他玩家实例的位置由网络同步
+            if (_networkObject != null && !_networkObject.IsOwner)
+            {
+                return;
+            }
+
             // 菜单打开（鼠标解锁）时不处理视角与移动
             if (Cursor.lockState != CursorLockMode.Locked)
+            {
+                return;
+            }
+
+            // 相机由 LocalPlayerSetup 在生成后挂载（晚于本组件 Awake），按需延迟解析
+            if (_camera == null)
+            {
+                _camera = GetComponentInChildren<Camera>();
+            }
+            if (_camera == null)
             {
                 return;
             }

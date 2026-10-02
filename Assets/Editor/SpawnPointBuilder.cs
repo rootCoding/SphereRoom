@@ -14,8 +14,11 @@ namespace SphereRoom.EditorTools
     /// </summary>
     public static class SpawnPointBuilder
     {
-        /// <summary>出生点数量 = 玩家数量：M1 单机为 1；M2 联机时改为 4（或按玩家数动态创建）。</summary>
-        private const int SpawnPointCount = 1;
+        /// <summary>
+        /// 出生点常驻数量 = 4（位置自由编辑）。
+        /// 运行时按实际联机人数启用前 N 个，其余由 NetworkBootstrap 禁用（用户要求：2 人联机只留前 2 个）。
+        /// </summary>
+        private const int SpawnPointCount = 4;
 
         [MenuItem("Tools/球体房间/生成出生点与启动器")]
         public static void Build()
