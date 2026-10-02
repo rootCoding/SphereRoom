@@ -161,18 +161,23 @@ namespace SphereRoom.UI
             // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板），位于「继续游戏」上方
             Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
 
-            // 大厅 ID 行（仅 Steam 联机模式显示）：只读展示框（带背景，不可输入）+ 右侧「复制」按钮
+            // 大厅 ID 行（仅 Steam 联机模式显示）：只读展示框 + 左侧描述「大厅ID：」 + 右侧纯数字，再右边「复制」按钮
             TextMeshProUGUI lobbyIdText = null;
             Button copyButton = null;
             if (showSteamInvite)
             {
-                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(240f, 34f), new Vector2(-40f, 88f),
+                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(250f, 34f), new Vector2(-45f, 88f),
                     new Color(0f, 0f, 0f, 0.45f));
-                lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "大厅ID：", 15,
-                    new Vector2(240f, 34f), new Vector2(-40f, 88f));
+                TextMeshProUGUI lobbyIdLabel = UiFactory.CreateText(menuRt, "LobbyIdLabel", "大厅ID：", 14,
+                    new Vector2(80f, 34f), new Vector2(-125f, 88f));
+                lobbyIdLabel.alignment = TextAlignmentOptions.MidlineLeft;
+                lobbyIdLabel.color = new Color(0.7f, 0.78f, 0.85f);
+                // 纯数字文本（复制时只复制这里的内容，不带「大厅ID：」前缀）
+                lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "", 14,
+                    new Vector2(150f, 34f), new Vector2(5f, 88f));
                 lobbyIdText.alignment = TextAlignmentOptions.MidlineLeft;
                 lobbyIdText.color = new Color(0.9f, 0.93f, 0.96f);
-                copyButton = CreateCopyButton(menuRt, new Vector2(125f, 88f));
+                copyButton = CreateCopyButton(menuRt, new Vector2(128f, 88f));
             }
 
             menu.SetActive(false);
@@ -240,7 +245,7 @@ namespace SphereRoom.UI
             copyGo.transform.SetParent(parent, false);
             RectTransform copyRt = copyGo.GetComponent<RectTransform>();
             copyRt.anchorMin = copyRt.anchorMax = new Vector2(0.5f, 0.5f);
-            copyRt.sizeDelta = new Vector2(90f, 34f);
+            copyRt.sizeDelta = new Vector2(84f, 34f);
             copyRt.anchoredPosition = anchoredPosition;
             Image copyBg = copyGo.AddComponent<Image>();
             copyBg.color = new Color(0.3f, 0.42f, 0.6f);
@@ -253,7 +258,7 @@ namespace SphereRoom.UI
             copyColors.selectedColor = copyColors.highlightedColor;
             copyColors.fadeDuration = 0.08f;
             copyButton.colors = copyColors;
-            UiFactory.CreateText(copyRt, "Label", "复制", 18, new Vector2(90f, 34f), Vector2.zero);
+            UiFactory.CreateText(copyRt, "Label", "复制", 16, new Vector2(84f, 34f), Vector2.zero);
             return copyButton;
         }
 

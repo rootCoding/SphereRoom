@@ -95,14 +95,14 @@ namespace SphereRoom.UI
         }
 
         /// <summary>
-        /// 设置 Esc 菜单显示的 Steam 大厅 ID（GameBootstrap 在本地玩家就绪时调用）。
-        /// 纯展示文本（只读，无输入组件），左侧带「大厅ID：」描述。
+        /// 设置 Esc 菜单显示的 Steam 大厅 ID 纯数字文本（GameBootstrap 在本地玩家就绪时调用）。
+        /// 「大厅ID：」描述是左侧独立静态文本；复制时只取这里的纯数字。
         /// </summary>
         public void SetLobbyId(string lobbyId)
         {
             if (_lobbyIdText != null)
             {
-                _lobbyIdText.text = $"大厅ID：{lobbyId}";
+                _lobbyIdText.text = lobbyId;
             }
         }
 

@@ -108,7 +108,7 @@ namespace SphereRoom.UI
             Show();
         }
 
-        /// <summary>按当前联机方式刷新大厅 UI（Steam 模式隐藏端口、输入框变大厅 ID）。</summary>
+        /// <summary>按当前联机方式刷新大厅 UI（Steam 模式隐藏端口、输入框变大厅 ID 并加宽居中）。</summary>
         private void ApplyModeUI()
         {
             _modeButtonLabel.text = _steamMode ? "联机方式：Steam 联机" : "联机方式：局域网直连";
@@ -117,17 +117,31 @@ namespace SphereRoom.UI
             _portField.gameObject.SetActive(!_steamMode);
             _hostButtonLabel.text = _steamMode ? "创建房间（Steam）" : "创建房间";
             _joinButtonLabel.text = _steamMode ? "加入房间（Steam）" : "加入房间";
+
+            RectTransform inputRt = _ipField.GetComponent<RectTransform>();
+            RectTransform labelRt = _ipLabel.rectTransform;
             if (_steamMode)
             {
                 // 暂存 IP 文本，切回局域网时还原
                 _utpIpText = _ipField.text;
                 _ipField.text = string.Empty;
                 _ipPlaceholder.text = "输入大厅 ID（19 位数字）";
+                // 输入框加宽（放得下占位文案）并整体居中，标签跟随左移
+                inputRt.sizeDelta = new Vector2(300f, 44f);
+                inputRt.anchoredPosition = new Vector2(54f, 40f);
+                labelRt.anchoredPosition = new Vector2(-154f, 40f);
+                _ipPlaceholder.alignment = TextAlignmentOptions.MidlineCenter;
+                _ipField.textComponent.alignment = TextAlignmentOptions.MidlineCenter;
             }
             else
             {
                 _ipField.text = string.IsNullOrWhiteSpace(_utpIpText) ? "127.0.0.1" : _utpIpText;
                 _ipPlaceholder.text = "例如 127.0.0.1";
+                inputRt.sizeDelta = new Vector2(220f, 44f);
+                inputRt.anchoredPosition = new Vector2(56f, 40f);
+                labelRt.anchoredPosition = new Vector2(-116f, 40f);
+                _ipPlaceholder.alignment = TextAlignmentOptions.MidlineLeft;
+                _ipField.textComponent.alignment = TextAlignmentOptions.MidlineLeft;
             }
         }
 
