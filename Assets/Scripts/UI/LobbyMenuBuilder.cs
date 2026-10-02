@@ -61,10 +61,8 @@ namespace SphereRoom.UI
                 new Vector2(100f, 30f), new Vector2(-116f, -12f));
             portLabel.alignment = TextAlignmentOptions.MidlineRight;
             portLabel.color = new Color(0.8f, 0.85f, 0.9f);
-            // 端口默认随机：编辑器退出 Play 后 UnityTransport 可能不释放端口（已知问题），
-            // 每次运行换随机端口即可避免与上次泄漏的端口冲突
-            string randomPort = Random.Range(20000, 60000).ToString();
-            TMP_InputField portField = CreateInput(panelRt, "PortInput", "自动随机", randomPort,
+            // 固定端口 12305（便于联机测试；若提示端口被占用，重启编辑器释放即可）
+            TMP_InputField portField = CreateInput(panelRt, "PortInput", "默认 12305", "12305",
                 new Vector2(56f, -12f), 220f);
 
             // ---- 按钮 ----

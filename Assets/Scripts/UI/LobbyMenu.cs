@@ -53,10 +53,10 @@ namespace SphereRoom.UI
             Show();
         }
 
-        /// <summary>读取端口输入（非法输入回退 9050）。</summary>
+        /// <summary>读取端口输入（非法输入回退默认端口 12305）。</summary>
         private int ReadPort()
         {
-            return int.TryParse(_portField.text, out int port) ? port : 9050;
+            return int.TryParse(_portField.text, out int port) ? port : 12305;
         }
 
         /// <summary>显示大厅并解锁鼠标（可带状态文案）。</summary>
