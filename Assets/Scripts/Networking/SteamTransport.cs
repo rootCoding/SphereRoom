@@ -84,6 +84,12 @@ namespace SphereRoom.Networking
             }
         }
 
+        /// <summary>接受对方发起的 P2P 会话请求（Steam P2P 收发数据的前提）。</summary>
+        private void AcceptSession(SteamId id)
+        {
+            SteamNetworking.AcceptP2PSessionWithUser(id);
+        }
+
         public override bool StartServer()
         {
             if (!SteamClient.IsValid)
@@ -210,7 +216,7 @@ namespace SphereRoom.Networking
             {
                 uint size = 0;
                 SteamId from = default;
-                if (!SteamNetworking.ReadP2PPacket(_recvBuffer, out size, out from, Channel) || size == 0)
+                if (!SteamNetworking.ReadP2PPacket(_recvBuffer, ref size, ref from, Channel) || size == 0)
                 {
                     continue;
                 }
