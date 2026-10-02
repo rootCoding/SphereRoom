@@ -1,2 +1,11 @@
-# SphericalSpaceTest
-This is a demo for spherical space testing.
+# SphereRoom（球体房间）
+
+Unity 6 多人联机技术测试 Demo：支持 1-4 名玩家联机，在房间内推动共享物理球体。
+
+## 状态
+
+开发中 —— 完整的运行说明与网络方案说明将在开发完成后补充在此（保持一页以内）。
+
+## 环境
+
+- Unity 6000.3.14f1（URP）
