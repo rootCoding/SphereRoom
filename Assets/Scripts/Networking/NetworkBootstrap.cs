@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using SphereRoom.Player;
@@ -304,14 +305,25 @@ namespace SphereRoom.Networking
             SpawnBallAt(new Vector3(0f, 0.5f, 0f));
         }
 
-        /// <summary>加分项：每 15 秒由主机在房间内随机位置生成一个新球（主机权威，自动同步）。</summary>
+        /// <summary>
+        /// 加分项：每 15 秒由主机在房间内随机位置生成一个新球（主机权威，自动同步）。
+        /// 场上球数达到上限 10 个后停止生成（场上球数 = NetworkRigidbody 数量，只有球挂了这个组件）。
+        /// </summary>
         private IEnumerator BallSpawnLoop()
         {
+            const int MaxBalls = 10;
             while (_networkManager != null && _networkManager.IsListening)
             {
                 yield return new WaitForSeconds(15f);
                 if (!_networkManager.IsServer)
                 {
+                    continue;
+                }
+
+                int ballCount = UnityEngine.Object.FindObjectsByType<NetworkRigidbody>(FindObjectsSortMode.None).Length;
+                if (ballCount >= MaxBalls)
+                {
+                    Debug.Log($"[NetworkBootstrap] 场上已有 {ballCount} 个球（上限 {MaxBalls}），不再生成新球");
                     continue;
                 }
                 SpawnBallAt(new Vector3(UnityEngine.Random.Range(-8f, 8f), 0.5f, UnityEngine.Random.Range(-8f, 8f)));

@@ -37,7 +37,6 @@ namespace SphereRoom.UI
         private TextMeshProUGUI _lobbyIdText;
         private Button _copyButton;
         private TextMeshProUGUI _copyLabel;
-        private Coroutine _copyCoroutine;
         private TextMeshProUGUI _tappedText;
         private Coroutine _tappedCoroutine;
 
@@ -95,16 +94,19 @@ namespace SphereRoom.UI
             }
         }
 
-        /// <summary>设置 Esc 菜单显示的 Steam 大厅 ID（GameBootstrap 在本地玩家就绪时调用）。</summary>
+        /// <summary>
+        /// 设置 Esc 菜单显示的 Steam 大厅 ID（GameBootstrap 在本地玩家就绪时调用）。
+        /// 纯展示文本（只读，无输入组件），左侧带「大厅ID：」描述。
+        /// </summary>
         public void SetLobbyId(string lobbyId)
         {
             if (_lobbyIdText != null)
             {
-                _lobbyIdText.text = lobbyId;
+                _lobbyIdText.text = $"大厅ID：{lobbyId}";
             }
         }
 
-        /// <summary>复制大厅 ID 到剪贴板，按钮短暂显示「已复制」。</summary>
+        /// <summary>复制大厅 ID 到剪贴板，按钮变为「已复制」（下次打开菜单时恢复「复制」）。</summary>
         private void CopyLobbyId()
         {
             string id = _lobbyIdText != null ? _lobbyIdText.text : string.Empty;
@@ -114,25 +116,10 @@ namespace SphereRoom.UI
             }
             GUIUtility.systemCopyBuffer = id;
             Debug.Log($"[PlayerHUD] 大厅 ID 已复制：{id}");
-            if (_copyCoroutine != null)
-            {
-                StopCoroutine(_copyCoroutine);
-            }
-            _copyCoroutine = StartCoroutine(CopyFeedbackRoutine());
-        }
-
-        private IEnumerator CopyFeedbackRoutine()
-        {
             if (_copyLabel != null)
             {
                 _copyLabel.text = "已复制";
             }
-            yield return new WaitForSeconds(1f);
-            if (_copyLabel != null)
-            {
-                _copyLabel.text = "复制";
-            }
-            _copyCoroutine = null;
         }
 
         private void Start()
@@ -207,6 +194,12 @@ namespace SphereRoom.UI
             _menuPanel.SetActive(open);
             Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = open;
+
+            // 再次打开菜单时，「已复制」按钮文案恢复为「复制」
+            if (open && _copyLabel != null)
+            {
+                _copyLabel.text = "复制";
+            }
         }
 
         private void ShowCrosshair(bool show)

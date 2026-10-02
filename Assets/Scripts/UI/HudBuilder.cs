@@ -161,13 +161,15 @@ namespace SphereRoom.UI
             // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板），位于「继续游戏」上方
             Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
 
-            // 大厅 ID 行（仅 Steam 联机模式显示）：左侧大厅 ID + 右侧「复制」按钮
+            // 大厅 ID 行（仅 Steam 联机模式显示）：只读展示框（带背景，不可输入）+ 右侧「复制」按钮
             TextMeshProUGUI lobbyIdText = null;
             Button copyButton = null;
             if (showSteamInvite)
             {
-                lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "大厅 ID：", 16,
-                    new Vector2(230f, 34f), new Vector2(-45f, 88f));
+                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(240f, 34f), new Vector2(-40f, 88f),
+                    new Color(0f, 0f, 0f, 0.45f));
+                lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "大厅ID：", 15,
+                    new Vector2(240f, 34f), new Vector2(-40f, 88f));
                 lobbyIdText.alignment = TextAlignmentOptions.MidlineLeft;
                 lobbyIdText.color = new Color(0.9f, 0.93f, 0.96f);
                 copyButton = CreateCopyButton(menuRt, new Vector2(125f, 88f));
