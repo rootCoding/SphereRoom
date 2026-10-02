@@ -130,8 +130,8 @@ namespace SphereRoom.UI
                 inputRt.sizeDelta = new Vector2(300f, 44f);
                 inputRt.anchoredPosition = new Vector2(54f, 40f);
                 labelRt.anchoredPosition = new Vector2(-154f, 40f);
-                _ipPlaceholder.alignment = TextAlignmentOptions.MidlineCenter;
-                _ipField.textComponent.alignment = TextAlignmentOptions.MidlineCenter;
+                _ipPlaceholder.alignment = TextAlignmentOptions.Midline;
+                _ipField.textComponent.alignment = TextAlignmentOptions.Midline;
             }
             else
             {
