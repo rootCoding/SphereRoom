@@ -61,26 +61,44 @@ namespace SphereRoom.Networking
         /// <summary>NGO 在 StartHost/StartClient 时调用（早于 StartServer/StartClient）。首次初始化 Steam。</summary>
         public override void Initialize(NetworkManager networkManager = null)
         {
-            if (!SteamClient.IsValid)
+            TryInitSteam();
+        }
+
+        /// <summary>
+        /// 确保 Steam 已初始化（幂等）。
+        /// NetworkBootstrap 在开房/加入前必须主动调用——NGO 的 Initialize 时机在 StartHost 之后，
+        /// 光靠它会在检查 IsSteamReady 时还没初始化，永远报「Steam 未启动」。
+        /// </summary>
+        public bool EnsureSteamReady()
+        {
+            TryInitSteam();
+            return SteamClient.IsValid;
+        }
+
+        private void TryInitSteam()
+        {
+            if (SteamClient.IsValid)
             {
-                try
-                {
-                    SteamClient.Init(SteamAppId);
-                }
-                catch (Exception e)
-                {
-                    Debug.LogError($"[SteamTransport] Steam 初始化异常：{e.Message}");
-                }
+                return;
+            }
+
+            try
+            {
+                SteamClient.Init(SteamAppId);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[SteamTransport] Steam 初始化异常：{e}");
             }
 
             if (SteamClient.IsValid)
             {
-                Debug.Log($"[SteamTransport] Steam 初始化成功，本机 SteamID={SteamClient.SteamId}（名字：{SteamClient.Name}）");
+                Debug.Log($"[SteamTransport] Steam 初始化成功，本机 SteamID={SteamClient.SteamId}（名字：{SteamClient.Name}，在线：{SteamClient.IsLoggedOn}）");
                 SteamNetworking.OnP2PSessionRequest += AcceptSession;
             }
             else
             {
-                Debug.LogWarning("[SteamTransport] Steam 初始化失败：请先启动 Steam 客户端（测试用 AppID 480 Spacewar）。");
+                Debug.LogWarning("[SteamTransport] Steam 初始化失败：请确认 Steam 客户端已启动并登录（测试用 AppID 480 Spacewar）。");
             }
         }
 

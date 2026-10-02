@@ -91,7 +91,7 @@ namespace SphereRoom.Networking
             }
             if (Mode == NetMode.Steam)
             {
-                if (!_steamTransport.IsSteamReady)
+                if (!_steamTransport.EnsureSteamReady())
                 {
                     Status?.Invoke("Steam 初始化失败：请先启动 Steam 客户端");
                     return;
@@ -124,7 +124,7 @@ namespace SphereRoom.Networking
             }
             if (Mode == NetMode.Steam)
             {
-                if (!_steamTransport.IsSteamReady)
+                if (!_steamTransport.EnsureSteamReady())
                 {
                     Status?.Invoke("Steam 初始化失败：请先启动 Steam 客户端");
                     return;
