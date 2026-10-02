@@ -24,7 +24,7 @@ WASD 移动 · 鼠标视角 · Shift 冲刺（消耗体力，3 秒耗尽 / 6 秒
 3. **玩家**：owner 权威 `NetworkTransform`（本地操控本地计算、同步给他人），第一人称手感与网络负担兼得
 4. 主机断开时客户端弹窗提示并可确认返回大厅；中途加入自动同步球的状态；官方包与 Unity 6 深度集成，1-4 人小房间正是其典型场景
 
-### Steam 联机（超级加分项）
+### Steam 联机
 
 社区现成的 Steam 传输层均停留在 NGO 1.x 时代（内置 2020 年旧版 Steam 库，有已知 bug），故**自写 NGO 2.x 传输层**（`SteamTransport.cs`）：基于 Facepunch.Steamworks 2.5.2 的 Steam P2P 网络实现 `NetworkTransport` 接口——客户端 SteamId ↔ NGO clientId 映射、优雅退出 BYE 报文、1 秒心跳 + 5 秒超时断连检测；配合 Steam 大厅（创建 / 大厅 ID 加入 / 好友邀请 / 接受邀请自动加入，Overlay 不可用时自动回退游戏内好友列表邀请）。局域网直连模式完整保留。
 
