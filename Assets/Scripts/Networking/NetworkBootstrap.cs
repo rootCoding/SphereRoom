@@ -205,10 +205,10 @@ namespace SphereRoom.Networking
             _networkManager.StartClient();
         }
 
-        /// <summary>房主：打开 Steam 好友邀请面板（Esc 菜单「邀请 Steam 好友」按钮）。</summary>
-        public void InviteFriends()
+        /// <summary>房主：打开 Steam 好友邀请面板（Esc 菜单「邀请 Steam 好友」按钮）。返回 null=成功，否则错误文案。</summary>
+        public string InviteFriends()
         {
-            _lobbyManager.InviteFriends();
+            return _lobbyManager.InviteFriends();
         }
 
         /// <summary>缓存出生点（按层级顺序），初始全部禁用。</summary>

@@ -39,6 +39,7 @@ namespace SphereRoom.UI
         private TextMeshProUGUI _copyLabel;
         private TextMeshProUGUI _tappedText;
         private Coroutine _tappedCoroutine;
+        private Coroutine _noticeCoroutine;
 
         private bool _initialized;
         private bool _menuOpen;
@@ -186,6 +187,35 @@ namespace SphereRoom.UI
             yield return new WaitForSeconds(0.8f);
             _tappedText.gameObject.SetActive(false);
             _tappedCoroutine = null;
+        }
+
+        /// <summary>屏幕上方显示一条系统提示（淡红色，3 秒后消失），如邀请面板打不开的原因。</summary>
+        public void ShowNotice(string text)
+        {
+            if (_tappedText == null)
+            {
+                return;
+            }
+            if (_noticeCoroutine != null)
+            {
+                StopCoroutine(_noticeCoroutine);
+            }
+            _tappedText.text = text;
+            _tappedText.fontSize = 26;
+            _tappedText.color = new Color(1f, 0.6f, 0.5f);
+            _tappedText.gameObject.SetActive(true);
+            _noticeCoroutine = StartCoroutine(HideNoticeRoutine());
+        }
+
+        private IEnumerator HideNoticeRoutine()
+        {
+            yield return new WaitForSeconds(3f);
+            _tappedText.gameObject.SetActive(false);
+            // 还原 Tapped 提示的样式
+            _tappedText.text = "Tapped";
+            _tappedText.fontSize = 40;
+            _tappedText.color = new Color(1f, 0.85f, 0.3f);
+            _noticeCoroutine = null;
         }
 
         private void SetMenuOpen(bool open)

@@ -40,7 +40,14 @@ namespace SphereRoom.Game
             _lobby.Hide();
             bool steamMode = _network.Mode == NetMode.Steam;
             _hud = HudBuilder.Build(stamina, steamMode);
-            _hud.InviteClicked += () => _network.InviteFriends();
+            _hud.InviteClicked += () =>
+            {
+                string error = _network.InviteFriends();
+                if (!string.IsNullOrEmpty(error))
+                {
+                    _hud.ShowNotice(error);
+                }
+            };
             if (steamMode)
             {
                 _hud.SetLobbyId(_network.CurrentLobbyId?.ToString() ?? string.Empty);
