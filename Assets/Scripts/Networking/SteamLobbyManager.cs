@@ -164,7 +164,7 @@ namespace SphereRoom.Networking
         /// <summary>获取在线 Steam 好友（名字 + SteamId，按名字排序），用于游戏内好友列表邀请。</summary>
         public List<(string Name, ulong SteamId)> GetOnlineFriends()
         {
-            var result = new List<(string, ulong)>();
+            var result = new List<(string Name, ulong SteamId)>();
             if (!SteamClient.IsValid)
             {
                 return result;
