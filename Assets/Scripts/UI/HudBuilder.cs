@@ -19,7 +19,7 @@ namespace SphereRoom.UI
     /// </summary>
     public static class HudBuilder
     {
-        public static PlayerHUD Build(StaminaSystem stamina)
+        public static PlayerHUD Build(StaminaSystem stamina, bool showSteamInvite)
         {
             GameObject hudRoot = new GameObject("PlayerHUD");
             Canvas canvas = hudRoot.AddComponent<Canvas>();
@@ -101,22 +101,22 @@ namespace SphereRoom.UI
             menu.transform.SetParent(hudRoot.transform, false);
             RectTransform menuRt = menu.GetComponent<RectTransform>();
             menuRt.anchorMin = menuRt.anchorMax = new Vector2(0.5f, 0.5f);
-            menuRt.sizeDelta = new Vector2(360f, 340f);
+            menuRt.sizeDelta = new Vector2(380f, 470f);
             menuRt.anchoredPosition = Vector2.zero;
 
             // 描边底 + 面板底（先创建的在下层）
-            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 346f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Border", new Vector2(386f, 476f), Vector2.zero,
                 new Color(0.45f, 0.62f, 0.9f, 0.45f));
-            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 340f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Background", new Vector2(380f, 470f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
-            TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 130f));
+            TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 150f));
             title.color = new Color(0.88f, 0.92f, 1f);
-            UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 106f),
+            UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 126f),
                 new Color(0.45f, 0.62f, 0.9f, 0.8f));
 
-            Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 48f);
-            Toggle helpToggle = CreateMenuToggle(menuRt, "HelpToggle", "操作说明", -10f);
+            Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 32f);
+            Toggle helpToggle = CreateMenuToggle(menuRt, "HelpToggle", "操作说明", -26f);
 
             // 继续游戏按钮（悬停变亮 / 按下变暗）
             GameObject btnGo = new GameObject("ResumeButton", typeof(RectTransform));
@@ -124,7 +124,7 @@ namespace SphereRoom.UI
             RectTransform btnRt = btnGo.GetComponent<RectTransform>();
             btnRt.anchorMin = btnRt.anchorMax = new Vector2(0.5f, 0.5f);
             btnRt.sizeDelta = new Vector2(200f, 46f);
-            btnRt.anchoredPosition = new Vector2(0f, -66f);
+            btnRt.anchoredPosition = new Vector2(0f, -140f);
             Image btnBg = btnGo.AddComponent<Image>();
             btnBg.color = new Color(0.25f, 0.55f, 0.95f);
             Button button = btnGo.AddComponent<Button>();
@@ -144,7 +144,7 @@ namespace SphereRoom.UI
             RectTransform quitRt = quitGo.GetComponent<RectTransform>();
             quitRt.anchorMin = quitRt.anchorMax = new Vector2(0.5f, 0.5f);
             quitRt.sizeDelta = new Vector2(200f, 44f);
-            quitRt.anchoredPosition = new Vector2(0f, -123f);
+            quitRt.anchoredPosition = new Vector2(0f, -197f);
             Image quitBg = quitGo.AddComponent<Image>();
             quitBg.color = new Color(0.65f, 0.25f, 0.25f);
             Button quitButton = quitGo.AddComponent<Button>();
@@ -158,12 +158,123 @@ namespace SphereRoom.UI
             quitButton.colors = quitColors;
             UiFactory.CreateText(quitRt, "Label", "退出游戏", 22, new Vector2(200f, 44f), Vector2.zero);
 
+            // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板），位于「继续游戏」上方
+            Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
+
+            // 大厅 ID 行（仅 Steam 联机模式显示）：三层结构 ——「大厅ID」描述 + 数字展示框 + 「复制」按钮，整体居中
+            TextMeshProUGUI lobbyIdText = null;
+            Button copyButton = null;
+            if (showSteamInvite)
+            {
+                TextMeshProUGUI lobbyIdLabel = UiFactory.CreateText(menuRt, "LobbyIdLabel", "大厅ID", 14,
+                    new Vector2(60f, 34f), new Vector2(-130f, 88f));
+                lobbyIdLabel.alignment = TextAlignmentOptions.MidlineRight;
+                lobbyIdLabel.color = new Color(0.8f, 0.85f, 0.9f);
+                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(162f, 34f), new Vector2(-13f, 88f),
+                    new Color(0f, 0f, 0f, 0.45f));
+                // 纯数字文本（复制时只复制这里的内容）
+                lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "", 14,
+                    new Vector2(146f, 34f), new Vector2(-13f, 88f));
+                lobbyIdText.alignment = TextAlignmentOptions.MidlineLeft;
+                lobbyIdText.color = new Color(0.9f, 0.93f, 0.96f);
+                copyButton = CreateCopyButton(menuRt, new Vector2(118f, 88f));
+            }
+
             menu.SetActive(false);
+
+            // ---- 提示对话框（居中：内容文本 + 「确认」按钮，初始隐藏）----
+            GameObject noticeDialog = new GameObject("NoticeDialog", typeof(RectTransform));
+            noticeDialog.transform.SetParent(hudRoot.transform, false);
+            RectTransform noticeRt = noticeDialog.GetComponent<RectTransform>();
+            noticeRt.anchorMin = noticeRt.anchorMax = new Vector2(0.5f, 0.5f);
+            noticeRt.sizeDelta = new Vector2(560f, 200f);
+            noticeRt.anchoredPosition = Vector2.zero;
+
+            UiFactory.CreateImage(noticeRt, "Border", new Vector2(566f, 206f), Vector2.zero,
+                new Color(0.8f, 0.4f, 0.35f, 0.6f));
+            UiFactory.CreateImage(noticeRt, "Background", new Vector2(560f, 200f), Vector2.zero,
+                new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
+
+            TextMeshProUGUI noticeText = UiFactory.CreateText(noticeRt, "Text", "", 20,
+                new Vector2(520f, 100f), new Vector2(0f, 18f));
+            noticeText.alignment = TextAlignmentOptions.Midline;
+            noticeText.enableWordWrapping = true;
+            noticeText.color = new Color(1f, 0.75f, 0.65f);
+
+            GameObject confirmGo = new GameObject("NoticeConfirmButton", typeof(RectTransform));
+            confirmGo.transform.SetParent(noticeRt, false);
+            RectTransform confirmRt = confirmGo.GetComponent<RectTransform>();
+            confirmRt.anchorMin = confirmRt.anchorMax = new Vector2(0.5f, 0.5f);
+            confirmRt.sizeDelta = new Vector2(140f, 44f);
+            confirmRt.anchoredPosition = new Vector2(0f, -58f);
+            Image confirmBg = confirmGo.AddComponent<Image>();
+            confirmBg.color = new Color(0.25f, 0.55f, 0.95f);
+            Button noticeConfirm = confirmGo.AddComponent<Button>();
+            noticeConfirm.targetGraphic = confirmBg;
+            ColorBlock confirmColors = noticeConfirm.colors;
+            confirmColors.normalColor = new Color(0.25f, 0.55f, 0.95f);
+            confirmColors.highlightedColor = new Color(0.38f, 0.66f, 1f);
+            confirmColors.pressedColor = new Color(0.16f, 0.4f, 0.75f);
+            confirmColors.selectedColor = confirmColors.highlightedColor;
+            confirmColors.fadeDuration = 0.08f;
+            noticeConfirm.colors = confirmColors;
+            UiFactory.CreateText(confirmRt, "Label", "确认", 22, new Vector2(140f, 44f), Vector2.zero);
+
+            noticeDialog.SetActive(false);
+
+            // ---- 好友列表面板（Overlay 不可用时的邀请回退：好友名 + 邀请按钮，初始隐藏）----
+            GameObject friendListPanel = new GameObject("FriendListPanel", typeof(RectTransform));
+            friendListPanel.transform.SetParent(hudRoot.transform, false);
+            RectTransform friendRt = friendListPanel.GetComponent<RectTransform>();
+            friendRt.anchorMin = friendRt.anchorMax = new Vector2(0.5f, 0.5f);
+            friendRt.sizeDelta = new Vector2(420f, 540f);
+            friendRt.anchoredPosition = Vector2.zero;
+
+            UiFactory.CreateImage(friendRt, "Border", new Vector2(426f, 546f), Vector2.zero,
+                new Color(0.45f, 0.62f, 0.9f, 0.45f));
+            UiFactory.CreateImage(friendRt, "Background", new Vector2(420f, 540f), Vector2.zero,
+                new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
+
+            TextMeshProUGUI friendTitle = UiFactory.CreateText(friendRt, "Title", "邀请 Steam 好友", 26,
+                new Vector2(300f, 40f), new Vector2(0f, 190f));
+            friendTitle.color = new Color(0.88f, 0.92f, 1f);
+
+            // 好友行容器（行由 PlayerHUD 按需动态生成）
+            GameObject rowsGo = new GameObject("Rows", typeof(RectTransform));
+            rowsGo.transform.SetParent(friendRt, false);
+            RectTransform rowsRt = rowsGo.GetComponent<RectTransform>();
+            rowsRt.anchorMin = rowsRt.anchorMax = new Vector2(0.5f, 0.5f);
+            rowsRt.sizeDelta = new Vector2(420f, 540f);
+            rowsRt.anchoredPosition = Vector2.zero;
+
+            // 关闭按钮
+            GameObject closeGo = new GameObject("CloseButton", typeof(RectTransform));
+            closeGo.transform.SetParent(friendRt, false);
+            RectTransform closeRt = closeGo.GetComponent<RectTransform>();
+            closeRt.anchorMin = closeRt.anchorMax = new Vector2(0.5f, 0.5f);
+            closeRt.sizeDelta = new Vector2(140f, 44f);
+            closeRt.anchoredPosition = new Vector2(0f, -232f);
+            Image closeBg = closeGo.AddComponent<Image>();
+            closeBg.color = new Color(0.25f, 0.55f, 0.95f);
+            Button friendCloseButton = closeGo.AddComponent<Button>();
+            friendCloseButton.targetGraphic = closeBg;
+            ColorBlock closeColors = friendCloseButton.colors;
+            closeColors.normalColor = new Color(0.25f, 0.55f, 0.95f);
+            closeColors.highlightedColor = new Color(0.38f, 0.66f, 1f);
+            closeColors.pressedColor = new Color(0.16f, 0.4f, 0.75f);
+            closeColors.selectedColor = closeColors.highlightedColor;
+            closeColors.fadeDuration = 0.08f;
+            friendCloseButton.colors = closeColors;
+            UiFactory.CreateText(closeRt, "Label", "关闭", 22, new Vector2(140f, 44f), Vector2.zero);
+
+            friendListPanel.SetActive(false);
 
             // ---- 接线 ----
             PlayerHUD hud = hudRoot.AddComponent<PlayerHUD>();
             hud.Initialize(staminaFill, staminaText, stamina, crosshair, helpPanel, menu,
-                crosshairToggle, helpToggle, button, tappedText, quitButton);
+                crosshairToggle, helpToggle, button, tappedText, quitButton, inviteButton,
+                lobbyIdText, copyButton, noticeDialog, noticeText, noticeConfirm,
+                friendListPanel, rowsRt, friendCloseButton);
             return hud;
         }
 
@@ -188,6 +299,55 @@ namespace SphereRoom.UI
             descRt.pivot = new Vector2(0f, 1f);
             descRt.anchoredPosition = new Vector2(iconWidth + 10f, y);
             desc.alignment = TextAlignmentOptions.MidlineLeft;
+        }
+
+        /// <summary>「邀请 Steam 好友」按钮（绿色系，Steam 模式才激活，位于「继续游戏」上方）。</summary>
+        private static Button CreateSteamInviteButton(Transform parent, bool showSteamInvite)
+        {
+            GameObject inviteGo = new GameObject("SteamInviteButton", typeof(RectTransform));
+            inviteGo.transform.SetParent(parent, false);
+            RectTransform inviteRt = inviteGo.GetComponent<RectTransform>();
+            inviteRt.anchorMin = inviteRt.anchorMax = new Vector2(0.5f, 0.5f);
+            inviteRt.sizeDelta = new Vector2(200f, 44f);
+            inviteRt.anchoredPosition = new Vector2(0f, -84f);
+            Image inviteBg = inviteGo.AddComponent<Image>();
+            inviteBg.color = new Color(0.25f, 0.5f, 0.35f);
+            Button inviteButton = inviteGo.AddComponent<Button>();
+            inviteButton.targetGraphic = inviteBg;
+            ColorBlock inviteColors = inviteButton.colors;
+            inviteColors.normalColor = new Color(0.25f, 0.5f, 0.35f);
+            inviteColors.highlightedColor = new Color(0.36f, 0.64f, 0.47f);
+            inviteColors.pressedColor = new Color(0.16f, 0.35f, 0.24f);
+            inviteColors.selectedColor = inviteColors.highlightedColor;
+            inviteColors.fadeDuration = 0.08f;
+            inviteButton.colors = inviteColors;
+            UiFactory.CreateText(inviteRt, "Label", "邀请 Steam 好友", 20, new Vector2(200f, 44f), Vector2.zero);
+            inviteGo.SetActive(showSteamInvite);
+            return inviteButton;
+        }
+
+        /// <summary>「复制」按钮（大厅 ID 行右侧）。</summary>
+        private static Button CreateCopyButton(Transform parent, Vector2 anchoredPosition)
+        {
+            GameObject copyGo = new GameObject("CopyButton", typeof(RectTransform));
+            copyGo.transform.SetParent(parent, false);
+            RectTransform copyRt = copyGo.GetComponent<RectTransform>();
+            copyRt.anchorMin = copyRt.anchorMax = new Vector2(0.5f, 0.5f);
+            copyRt.sizeDelta = new Vector2(84f, 34f);
+            copyRt.anchoredPosition = anchoredPosition;
+            Image copyBg = copyGo.AddComponent<Image>();
+            copyBg.color = new Color(0.3f, 0.42f, 0.6f);
+            Button copyButton = copyGo.AddComponent<Button>();
+            copyButton.targetGraphic = copyBg;
+            ColorBlock copyColors = copyButton.colors;
+            copyColors.normalColor = new Color(0.3f, 0.42f, 0.6f);
+            copyColors.highlightedColor = new Color(0.42f, 0.55f, 0.75f);
+            copyColors.pressedColor = new Color(0.2f, 0.3f, 0.45f);
+            copyColors.selectedColor = copyColors.highlightedColor;
+            copyColors.fadeDuration = 0.08f;
+            copyButton.colors = copyColors;
+            UiFactory.CreateText(copyRt, "Label", "复制", 16, new Vector2(84f, 34f), Vector2.zero);
+            return copyButton;
         }
 
         /// <summary>创建菜单开关行（勾选框 + 标签），返回 Toggle。</summary>

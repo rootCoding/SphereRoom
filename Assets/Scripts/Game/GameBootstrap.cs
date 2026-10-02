@@ -22,9 +22,12 @@ namespace SphereRoom.Game
             _lobby = LobbyMenuBuilder.Build();
             _lobby.OnHostClicked += _network.StartHost;
             _lobby.OnJoinClicked += (ip, port) => _network.StartClient(ip, port);
+            _lobby.OnModeChanged += steam => _network.Mode = steam ? NetMode.Steam : NetMode.UTP;
             _lobby.ForcedExit += OnForcedExit;
             _network.ConnectionStopped += OnConnectionStopped;
             _network.Status += _lobby.SetStatus;
+            // 接受 Steam 好友邀请自动加入：把大厅 UI 切到 Steam 模式
+            _network.SteamModeRequested += () => _lobby.SetSteamMode(true);
         }
 
         /// <summary>由 LocalPlayerSetup 调用：本地玩家生成完成 → 隐藏大厅 + 构建（或重建）HUD。</summary>
@@ -35,7 +38,36 @@ namespace SphereRoom.Game
                 Destroy(_hud.gameObject);
             }
             _lobby.Hide();
-            _hud = HudBuilder.Build(stamina);
+            bool steamMode = _network.Mode == NetMode.Steam;
+            _hud = HudBuilder.Build(stamina, steamMode);
+            _hud.InviteClicked += () =>
+            {
+                InviteResult result = _network.InviteFriends();
+                switch (result)
+                {
+                    case InviteResult.OverlayDisabled:
+                        // Overlay 注入失败（编辑器常见）→ 回退到游戏内好友列表直接邀请
+                        _hud.ShowFriendList(_network.GetOnlineFriends(), steamId =>
+                        {
+                            string error = _network.InviteFriend(steamId);
+                            if (!string.IsNullOrEmpty(error))
+                            {
+                                _hud.ShowNotice(error);
+                            }
+                        });
+                        break;
+                    case InviteResult.NoLobby:
+                        _hud.ShowNotice("尚未创建 Steam 大厅");
+                        break;
+                    case InviteResult.SteamUnavailable:
+                        _hud.ShowNotice("Steam 初始化失败：请先启动 Steam 客户端");
+                        break;
+                }
+            };
+            if (steamMode)
+            {
+                _hud.SetLobbyId(_network.CurrentLobbyId?.ToString() ?? string.Empty);
+            }
         }
 
         private void OnConnectionStopped(bool byHost, string message)

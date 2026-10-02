@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -15,6 +17,9 @@ namespace SphereRoom.UI
     /// </summary>
     public class PlayerHUD : MonoBehaviour
     {
+        /// <summary>点击「邀请 Steam 好友」（由 GameBootstrap 接到 NetworkBootstrap 打开 Steam 邀请面板）。</summary>
+        public event Action InviteClicked;
+
         private static readonly Color StaminaGreen = new Color(0.3f, 0.85f, 0.4f);
         private static readonly Color StaminaYellow = new Color(0.9f, 0.8f, 0.2f);
         private static readonly Color StaminaRed = new Color(0.9f, 0.25f, 0.2f);
@@ -29,8 +34,22 @@ namespace SphereRoom.UI
         private Toggle _helpToggle;
         private Button _resumeButton;
         private Button _quitButton;
+        private Button _inviteButton;
+        private TextMeshProUGUI _lobbyIdText;
+        private Button _copyButton;
+        private TextMeshProUGUI _copyLabel;
         private TextMeshProUGUI _tappedText;
         private Coroutine _tappedCoroutine;
+        private GameObject _noticeDialog;
+        private TextMeshProUGUI _noticeText;
+        private Button _noticeConfirm;
+        private GameObject _friendListPanel;
+        private Transform _friendRows;
+        private Button _friendCloseButton;
+
+        private const int MaxFriendRows = 8;
+        private const float FriendRowHeight = 44f;
+        private const float FriendRowTopY = 124f;
 
         private bool _initialized;
         private bool _menuOpen;
@@ -41,7 +60,10 @@ namespace SphereRoom.UI
         public void Initialize(Image staminaFill, TextMeshProUGUI staminaText, StaminaSystem stamina,
             GameObject crosshair, GameObject helpPanel, GameObject menuPanel,
             Toggle crosshairToggle, Toggle helpToggle, Button resumeButton, TextMeshProUGUI tappedText,
-            Button quitButton)
+            Button quitButton, Button inviteButton = null, TextMeshProUGUI lobbyIdText = null,
+            Button copyButton = null, GameObject noticeDialog = null, TextMeshProUGUI noticeText = null,
+            Button noticeConfirm = null, GameObject friendListPanel = null, Transform friendRows = null,
+            Button friendCloseButton = null)
         {
             _staminaFill = staminaFill;
             _staminaText = staminaText;
@@ -54,6 +76,19 @@ namespace SphereRoom.UI
             _resumeButton = resumeButton;
             _tappedText = tappedText;
             _quitButton = quitButton;
+            _inviteButton = inviteButton;
+            _lobbyIdText = lobbyIdText;
+            _copyButton = copyButton;
+            _noticeDialog = noticeDialog;
+            _noticeText = noticeText;
+            _noticeConfirm = noticeConfirm;
+            _friendListPanel = friendListPanel;
+            _friendRows = friendRows;
+            _friendCloseButton = friendCloseButton;
+            if (_copyButton != null)
+            {
+                _copyLabel = _copyButton.transform.Find("Label").GetComponent<TextMeshProUGUI>();
+            }
             _initialized = true;
 
             if (_stamina != null)
@@ -68,6 +103,50 @@ namespace SphereRoom.UI
             _helpToggle.onValueChanged.AddListener(ShowHelp);
             _resumeButton.onClick.AddListener(Resume);
             _quitButton.onClick.AddListener(QuitGame);
+            if (_inviteButton != null)
+            {
+                _inviteButton.onClick.AddListener(() => InviteClicked?.Invoke());
+            }
+            if (_copyButton != null)
+            {
+                _copyButton.onClick.AddListener(CopyLobbyId);
+            }
+            if (_noticeConfirm != null)
+            {
+                _noticeConfirm.onClick.AddListener(CloseNoticeDialog);
+            }
+            if (_friendCloseButton != null)
+            {
+                _friendCloseButton.onClick.AddListener(CloseFriendList);
+            }
+        }
+
+        /// <summary>
+        /// 设置 Esc 菜单显示的 Steam 大厅 ID 纯数字文本（GameBootstrap 在本地玩家就绪时调用）。
+        /// 「大厅ID：」描述是左侧独立静态文本；复制时只取这里的纯数字。
+        /// </summary>
+        public void SetLobbyId(string lobbyId)
+        {
+            if (_lobbyIdText != null)
+            {
+                _lobbyIdText.text = lobbyId;
+            }
+        }
+
+        /// <summary>复制大厅 ID 到剪贴板，按钮变为「已复制」（下次打开菜单时恢复「复制」）。</summary>
+        private void CopyLobbyId()
+        {
+            string id = _lobbyIdText != null ? _lobbyIdText.text : string.Empty;
+            if (string.IsNullOrEmpty(id))
+            {
+                return;
+            }
+            GUIUtility.systemCopyBuffer = id;
+            Debug.Log($"[PlayerHUD] 大厅 ID 已复制：{id}");
+            if (_copyLabel != null)
+            {
+                _copyLabel.text = "已复制";
+            }
         }
 
         private void Start()
@@ -136,12 +215,123 @@ namespace SphereRoom.UI
             _tappedCoroutine = null;
         }
 
+        /// <summary>弹出居中提示对话框（内容文本 + 「确认」按钮，点击确认关闭）。</summary>
+        public void ShowNotice(string text)
+        {
+            if (_noticeDialog == null || _noticeText == null)
+            {
+                return;
+            }
+            _noticeText.text = text;
+            _noticeDialog.SetActive(true);
+        }
+
+        private void CloseNoticeDialog()
+        {
+            if (_noticeDialog != null)
+            {
+                _noticeDialog.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// 弹出游戏内好友列表面板（Overlay 不可用时的邀请回退方案）：
+        /// 每个在线好友一行「名字 + 邀请按钮」，点击邀请后按钮变「已邀请」并禁用。
+        /// </summary>
+        public void ShowFriendList(List<(string Name, ulong SteamId)> friends, Action<ulong> onInvite)
+        {
+            if (_friendListPanel == null || _friendRows == null)
+            {
+                return;
+            }
+
+            ClearFriendRows();
+            if (friends == null || friends.Count == 0)
+            {
+                TextMeshProUGUI empty = UiFactory.CreateText(_friendRows, "Empty", "没有在线的好友", 20,
+                    new Vector2(360f, FriendRowHeight), new Vector2(0f, FriendRowTopY));
+                empty.color = new Color(0.7f, 0.75f, 0.8f);
+            }
+            else
+            {
+                int count = Mathf.Min(friends.Count, MaxFriendRows);
+                for (int i = 0; i < count; i++)
+                {
+                    CreateFriendRow(friends[i], onInvite, i);
+                }
+            }
+            _friendListPanel.SetActive(true);
+        }
+
+        private void CreateFriendRow((string Name, ulong SteamId) friend, Action<ulong> onInvite, int index)
+        {
+            float y = FriendRowTopY - index * FriendRowHeight;
+
+            TextMeshProUGUI nameText = UiFactory.CreateText(_friendRows, $"Name{index}", friend.Name, 20,
+                new Vector2(240f, FriendRowHeight), new Vector2(-75f, y));
+            nameText.alignment = TextAlignmentOptions.MidlineLeft;
+            nameText.color = new Color(0.9f, 0.93f, 0.96f);
+
+            GameObject btnGo = new GameObject($"Invite{index}", typeof(RectTransform));
+            btnGo.transform.SetParent(_friendRows, false);
+            RectTransform btnRt = btnGo.GetComponent<RectTransform>();
+            btnRt.anchorMin = btnRt.anchorMax = new Vector2(0.5f, 0.5f);
+            btnRt.sizeDelta = new Vector2(96f, 34f);
+            btnRt.anchoredPosition = new Vector2(150f, y);
+            Image btnBg = btnGo.AddComponent<Image>();
+            btnBg.color = new Color(0.25f, 0.5f, 0.35f);
+            Button inviteBtn = btnGo.AddComponent<Button>();
+            inviteBtn.targetGraphic = btnBg;
+            ColorBlock colors = inviteBtn.colors;
+            colors.normalColor = new Color(0.25f, 0.5f, 0.35f);
+            colors.highlightedColor = new Color(0.36f, 0.64f, 0.47f);
+            colors.pressedColor = new Color(0.16f, 0.35f, 0.24f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.fadeDuration = 0.08f;
+            inviteBtn.colors = colors;
+            TextMeshProUGUI label = UiFactory.CreateText(btnRt, "Label", "邀请", 18, new Vector2(96f, 34f), Vector2.zero);
+
+            ulong steamId = friend.SteamId;
+            inviteBtn.onClick.AddListener(() =>
+            {
+                onInvite?.Invoke(steamId);
+                label.text = "已邀请";
+                inviteBtn.interactable = false;
+            });
+        }
+
+        private void ClearFriendRows()
+        {
+            if (_friendRows == null)
+            {
+                return;
+            }
+            for (int i = _friendRows.childCount - 1; i >= 0; i--)
+            {
+                Destroy(_friendRows.GetChild(i).gameObject);
+            }
+        }
+
+        private void CloseFriendList()
+        {
+            if (_friendListPanel != null)
+            {
+                _friendListPanel.SetActive(false);
+            }
+        }
+
         private void SetMenuOpen(bool open)
         {
             _menuOpen = open;
             _menuPanel.SetActive(open);
             Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = open;
+
+            // 再次打开菜单时，「已复制」按钮文案恢复为「复制」
+            if (open && _copyLabel != null)
+            {
+                _copyLabel.text = "复制";
+            }
         }
 
         private void ShowCrosshair(bool show)
@@ -195,6 +385,18 @@ namespace SphereRoom.UI
             if (_quitButton != null)
             {
                 _quitButton.onClick.RemoveListener(QuitGame);
+            }
+            if (_inviteButton != null)
+            {
+                _inviteButton.onClick.RemoveAllListeners();
+            }
+            if (_copyButton != null)
+            {
+                _copyButton.onClick.RemoveAllListeners();
+            }
+            if (_noticeConfirm != null)
+            {
+                _noticeConfirm.onClick.RemoveAllListeners();
             }
         }
     }

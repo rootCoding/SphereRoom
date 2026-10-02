@@ -3,12 +3,20 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using SphereRoom.Player;
 
 namespace SphereRoom.Networking
 {
+    /// <summary>联机方式：局域网（Unity Transport 直连）或 Steam P2P（自写传输层）。</summary>
+    public enum NetMode
+    {
+        UTP,
+        Steam
+    }
+
     /// <summary>
     /// 网络引导器（由 GameBootstrap 运行时创建）：
     /// - 创建 NetworkManager + UnityTransport，注册玩家网络预制体（Resources/Player）
@@ -24,6 +32,15 @@ namespace SphereRoom.Networking
         /// <summary>连接状态变化（大厅状态栏显示）。</summary>
         public event Action<string> Status;
 
+        /// <summary>接受 Steam 好友邀请自动加入时触发（GameBootstrap 借此把大厅 UI 切到 Steam 模式）。</summary>
+        public event Action SteamModeRequested;
+
+        /// <summary>当前是否在联机会话中。</summary>
+        public bool IsListening => _networkManager != null && _networkManager.IsListening;
+
+        /// <summary>当前 Steam 大厅 ID（Esc 菜单显示与复制用）。</summary>
+        public ulong? CurrentLobbyId => _lobbyManager?.CurrentLobbyId;
+
         /// <summary>
         /// 本次会话使用的端口。
         /// 编辑器里 UnityTransport 退出 Play 后可能不释放端口（已知问题），
@@ -31,8 +48,13 @@ namespace SphereRoom.Networking
         /// </summary>
         private ushort _port;
 
+        /// <summary>当前联机方式（由大厅「联机方式」按钮切换）。</summary>
+        public NetMode Mode { get; set; } = NetMode.UTP;
+
         private NetworkManager _networkManager;
         private UnityTransport _transport;
+        private SteamTransport _steamTransport;
+        private SteamLobbyManager _lobbyManager;
         private GameObject _playerPrefab;
         private GameObject _ballPrefab;
         private bool _connectedOnce;   // 本次连接尝试是否成功连接过（区分「超时」与「掉线」）
@@ -78,10 +100,17 @@ namespace SphereRoom.Networking
                 Status?.Invoke("玩家预制体缺失：请先运行 Tools/球体房间/生成玩家网络预制体");
                 return;
             }
+            if (Mode == NetMode.Steam)
+            {
+                StartHostSteam();
+                return;
+            }
+
             _port = (ushort)Mathf.Clamp(port, 1024, 65535);
-            _connectedOnce = false;
             // 主机监听所有网卡（局域网内其他机器可加入）
             _transport.SetConnectionData("0.0.0.0", _port);
+            _networkManager.NetworkConfig.NetworkTransport = _transport;
+            _connectedOnce = false;
             _networkManager.StartHost();
         }
 
@@ -98,14 +127,100 @@ namespace SphereRoom.Networking
             {
                 return;
             }
+            if (Mode == NetMode.Steam)
+            {
+                StartClientSteam(ip);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(ip))
             {
                 ip = "127.0.0.1";
             }
             _port = (ushort)Mathf.Clamp(port, 1024, 65535);
-            _connectedOnce = false;
             _transport.SetConnectionData(ip, _port);
+            _networkManager.NetworkConfig.NetworkTransport = _transport;
+            _connectedOnce = false;
             _networkManager.StartClient();
+        }
+
+        /// <summary>Steam 模式开房：先创建 Steam 大厅（4 人上限），成功后以 Steam 传输层启动主机。</summary>
+        private void StartHostSteam()
+        {
+            if (!_steamTransport.EnsureSteamReady())
+            {
+                Status?.Invoke("Steam 初始化失败：请先启动 Steam 客户端");
+                return;
+            }
+            Status?.Invoke("正在创建 Steam 大厅…");
+            _lobbyManager.CreateLobby(lobby =>
+            {
+                if (!lobby.HasValue)
+                {
+                    Status?.Invoke("Steam 大厅创建失败，请重试");
+                    return;
+                }
+                _networkManager.NetworkConfig.NetworkTransport = _steamTransport;
+                _connectedOnce = false;
+                _networkManager.StartHost();
+            });
+        }
+
+        /// <summary>Steam 模式加入：输入框内容是大厅 ID → 加入大厅 → 自动取房主 SteamId 连接。</summary>
+        private void StartClientSteam(string input)
+        {
+            if (!_steamTransport.EnsureSteamReady())
+            {
+                Status?.Invoke("Steam 初始化失败：请先启动 Steam 客户端");
+                return;
+            }
+            if (!ulong.TryParse(input, out ulong lobbyId) || lobbyId == 0)
+            {
+                Status?.Invoke("大厅 ID 格式不正确");
+                return;
+            }
+            Status?.Invoke("正在加入 Steam 大厅…");
+            _lobbyManager.JoinLobby(lobbyId, lobby =>
+            {
+                if (!lobby.HasValue)
+                {
+                    Status?.Invoke("未找到大厅，请检查大厅 ID");
+                    return;
+                }
+                _steamTransport.TargetSteamId = lobby.Value.Owner.Id;
+                _networkManager.NetworkConfig.NetworkTransport = _steamTransport;
+                _connectedOnce = false;
+                _networkManager.StartClient();
+            });
+        }
+
+        /// <summary>接受 Steam 好友邀请 → 自动切 Steam 模式并连接邀请人（房主）的房间。</summary>
+        private void OnFriendInviteAccepted(ulong inviterSteamId)
+        {
+            Mode = NetMode.Steam;
+            SteamModeRequested?.Invoke();
+            _steamTransport.TargetSteamId = inviterSteamId;
+            _networkManager.NetworkConfig.NetworkTransport = _steamTransport;
+            _connectedOnce = false;
+            _networkManager.StartClient();
+        }
+
+        /// <summary>房主：尝试打开 Steam 好友邀请面板（Esc 菜单「邀请 Steam 好友」按钮）。Overlay 不可用时上层回退好友列表。</summary>
+        public InviteResult InviteFriends()
+        {
+            return _lobbyManager.TryOpenInviteOverlay();
+        }
+
+        /// <summary>直接邀请指定 Steam 好友（游戏内好友列表路径）。返回 null=成功，否则错误文案。</summary>
+        public string InviteFriend(ulong steamId)
+        {
+            return _lobbyManager.InviteFriend(steamId);
+        }
+
+        /// <summary>在线 Steam 好友列表（游戏内好友列表路径）。</summary>
+        public List<(string Name, ulong SteamId)> GetOnlineFriends()
+        {
+            return _lobbyManager.GetOnlineFriends();
         }
 
         /// <summary>缓存出生点（按层级顺序），初始全部禁用。</summary>
@@ -138,6 +253,12 @@ namespace SphereRoom.Networking
             _networkManager = networkGo.AddComponent<NetworkManager>();
             _networkManager.NetworkConfig = new NetworkConfig();
             _transport = networkGo.AddComponent<UnityTransport>();
+            _steamTransport = networkGo.AddComponent<SteamTransport>();
+            _lobbyManager = networkGo.AddComponent<SteamLobbyManager>();
+            _lobbyManager.Initialize(_steamTransport);
+            _lobbyManager.Status += message => Status?.Invoke(message);
+            _lobbyManager.FriendInviteAccepted += OnFriendInviteAccepted;
+            // 两种传输层常驻同一 NetworkManager，按 Mode 在 StartHost/StartClient 前切换
             _networkManager.NetworkConfig.NetworkTransport = _transport;
 
             // 加入房间超时控制：5 秒（1 秒 × 5 次重试）连不上即失败。
@@ -151,8 +272,16 @@ namespace SphereRoom.Networking
             _networkManager.AddNetworkPrefab(_ballPrefab);
             _networkManager.OnServerStarted += () =>
             {
-                Debug.Log($"[NetworkBootstrap] 服务器已启动，端口={_port}");
-                Status?.Invoke($"房间已创建（端口 {_port}）");
+                if (Mode == NetMode.Steam)
+                {
+                    Debug.Log($"[NetworkBootstrap] Steam 服务器已启动，大厅 ID={_lobbyManager.CurrentLobbyId}");
+                    Status?.Invoke($"房间已创建（Steam 大厅 ID：{_lobbyManager.CurrentLobbyId}）");
+                }
+                else
+                {
+                    Debug.Log($"[NetworkBootstrap] 服务器已启动，端口={_port}");
+                    Status?.Invoke($"房间已创建（端口 {_port}）");
+                }
                 SpawnSharedBall();
                 StartCoroutine(BallSpawnLoop());
             };
@@ -188,14 +317,25 @@ namespace SphereRoom.Networking
             SpawnBallAt(new Vector3(0f, 0.5f, 0f));
         }
 
-        /// <summary>加分项：每 15 秒由主机在房间内随机位置生成一个新球（主机权威，自动同步）。</summary>
+        /// <summary>
+        /// 加分项：每 15 秒由主机在房间内随机位置生成一个新球（主机权威，自动同步）。
+        /// 场上球数达到上限 10 个后停止生成（场上球数 = NetworkRigidbody 数量，只有球挂了这个组件）。
+        /// </summary>
         private IEnumerator BallSpawnLoop()
         {
+            const int MaxBalls = 10;
             while (_networkManager != null && _networkManager.IsListening)
             {
                 yield return new WaitForSeconds(15f);
                 if (!_networkManager.IsServer)
                 {
+                    continue;
+                }
+
+                int ballCount = UnityEngine.Object.FindObjectsByType<NetworkRigidbody>(FindObjectsSortMode.None).Length;
+                if (ballCount >= MaxBalls)
+                {
+                    Debug.Log($"[NetworkBootstrap] 场上已有 {ballCount} 个球（上限 {MaxBalls}），不再生成新球");
                     continue;
                 }
                 SpawnBallAt(new Vector3(UnityEngine.Random.Range(-8f, 8f), 0.5f, UnityEngine.Random.Range(-8f, 8f)));
@@ -270,7 +410,9 @@ namespace SphereRoom.Networking
             if (!_connectedOnce)
             {
                 // 从未连接成功（重试 5 秒耗尽）= 连接超时 / 房间不存在
-                ConnectionStopped?.Invoke(false, "连接超时，请检查主机IP与端口是否正确");
+                ConnectionStopped?.Invoke(false, Mode == NetMode.Steam
+                    ? "连接超时，请检查大厅 ID 是否正确"
+                    : "连接超时，请检查主机IP与端口是否正确");
             }
             else
             {
