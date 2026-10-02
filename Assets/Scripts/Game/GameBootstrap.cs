@@ -22,6 +22,7 @@ namespace SphereRoom.Game
             _lobby = LobbyMenuBuilder.Build();
             _lobby.OnHostClicked += _network.StartHost;
             _lobby.OnJoinClicked += (ip, port) => _network.StartClient(ip, port);
+            _lobby.ForcedExit += OnForcedExit;
             _network.ConnectionStopped += OnConnectionStopped;
             _network.Status += _lobby.SetStatus;
         }
@@ -37,14 +38,33 @@ namespace SphereRoom.Game
             _hud = HudBuilder.Build(stamina);
         }
 
-        private void OnConnectionStopped(string message)
+        private void OnConnectionStopped(bool byHost, string message)
+        {
+            if (byHost)
+            {
+                // 主机断开：5 秒红色提示（留在房间）→ 5 秒后强制退出（ForcedExit 时销毁 HUD）
+                _lobby.ShowHostDisconnected();
+            }
+            else
+            {
+                // 非主机原因掉线：直接回大厅
+                if (_hud != null)
+                {
+                    Destroy(_hud.gameObject);
+                    _hud = null;
+                }
+                _lobby.Show(message);
+            }
+        }
+
+        /// <summary>主机断开 5 秒后：强制退出房间，销毁游戏内 HUD。</summary>
+        private void OnForcedExit()
         {
             if (_hud != null)
             {
                 Destroy(_hud.gameObject);
                 _hud = null;
             }
-            _lobby.Show(message);
         }
     }
 }

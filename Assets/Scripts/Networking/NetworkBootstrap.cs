@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
@@ -17,8 +18,8 @@ namespace SphereRoom.Networking
     /// </summary>
     public class NetworkBootstrap : MonoBehaviour
     {
-        /// <summary>客户端连接断开（参数：给用户看的提示文案）。</summary>
-        public event Action<string> ConnectionStopped;
+        /// <summary>客户端连接断开（参数：是否主机退出、提示文案）。</summary>
+        public event Action<bool, string> ConnectionStopped;
 
         /// <summary>连接状态变化（大厅状态栏显示）。</summary>
         public event Action<string> Status;
@@ -143,6 +144,8 @@ namespace SphereRoom.Networking
             // 默认 60 次重试要等 60 秒，用户会以为卡死。
             _transport.ConnectTimeoutMS = 1000;
             _transport.MaxConnectAttempts = 5;
+            // 掉线检测：主机突然消失时默认要等 30 秒（心跳超时），缩短到 5 秒
+            _transport.DisconnectTimeoutMS = 5000;
 
             _networkManager.AddNetworkPrefab(_playerPrefab);
             _networkManager.AddNetworkPrefab(_ballPrefab);
@@ -151,6 +154,7 @@ namespace SphereRoom.Networking
                 Debug.Log($"[NetworkBootstrap] 服务器已启动，端口={_port}");
                 Status?.Invoke($"房间已创建（端口 {_port}）");
                 SpawnSharedBall();
+                StartCoroutine(BallSpawnLoop());
             };
             _networkManager.OnTransportFailure += () =>
             {
@@ -178,8 +182,28 @@ namespace SphereRoom.Networking
             UpdateSpawnPointVisibility();
         }
 
-        /// <summary>主机在房间中央生成共享物理球（主机权威物理，位置/速度自动同步给所有客户端）。</summary>
+        /// <summary>主机在房间中央生成初始共享物理球。</summary>
         private void SpawnSharedBall()
+        {
+            SpawnBallAt(new Vector3(0f, 0.5f, 0f));
+        }
+
+        /// <summary>加分项：每 15 秒由主机在房间内随机位置生成一个新球（主机权威，自动同步）。</summary>
+        private IEnumerator BallSpawnLoop()
+        {
+            while (_networkManager != null && _networkManager.IsListening)
+            {
+                yield return new WaitForSeconds(15f);
+                if (!_networkManager.IsServer)
+                {
+                    continue;
+                }
+                SpawnBallAt(new Vector3(UnityEngine.Random.Range(-8f, 8f), 0.5f, UnityEngine.Random.Range(-8f, 8f)));
+            }
+        }
+
+        /// <summary>生成共享物理球（主机权威物理，位置/速度自动同步给所有客户端）。</summary>
+        private void SpawnBallAt(Vector3 position)
         {
             if (_ballPrefab == null)
             {
@@ -189,9 +213,9 @@ namespace SphereRoom.Networking
 
             NetworkObject.InstantiateAndSpawn(_ballPrefab, _networkManager,
                 ownerClientId: NetworkManager.ServerClientId,
-                position: new Vector3(0f, 0.5f, 0f),
+                position: position,
                 rotation: Quaternion.identity);
-            Debug.Log("[NetworkBootstrap] 共享物理球已生成（房间中央）");
+            Debug.Log($"[NetworkBootstrap] 共享物理球已生成，位置={position}");
         }
 
         private void SpawnPlayerFor(ulong clientId, int spawnIndex)
@@ -236,26 +260,24 @@ namespace SphereRoom.Networking
         /// <summary>客户端连接断开 → 按「是否成功连接过」给出准确提示。</summary>
         private void OnClientStopped(bool byHost)
         {
-            if (_networkManager == null || _networkManager.IsServer)
+            // 本机主动退出（点「退出游戏」关闭会话时 IsServer 已为 false、ShutdownInProgress 为 true）
+            // 不显示任何提示——主机不需要看到自己的断开对话框
+            if (_networkManager == null || _networkManager.IsServer || _networkManager.ShutdownInProgress)
             {
                 return;
             }
 
-            string message;
             if (!_connectedOnce)
             {
                 // 从未连接成功（重试 5 秒耗尽）= 连接超时 / 房间不存在
-                message = "连接超时，请检查主机IP与端口是否正确";
-            }
-            else if (byHost)
-            {
-                message = "主机已退出，连接断开";
+                ConnectionStopped?.Invoke(false, "连接超时，请检查主机IP与端口是否正确");
             }
             else
             {
-                message = "连接已断开";
+                // 连上后断开：Demo 中客户端掉线的唯一场景是主机退出
+                //（byHost 标志在主机彻底关闭时并不可靠，按连接史判定）
+                ConnectionStopped?.Invoke(true, "主机已断开连接");
             }
-            ConnectionStopped?.Invoke(message);
         }
     }
 }

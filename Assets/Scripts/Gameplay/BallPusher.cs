@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
+using SphereRoom.UI;
 
 namespace SphereRoom.Gameplay
 {
@@ -17,6 +18,7 @@ namespace SphereRoom.Gameplay
         [SerializeField] private float maxBallSpeed = 18f;    // 球速上限（防止球飞出房间）
 
         private float _lastPushFixedTime = -1f;  // 上次结算推力的物理帧（主机端限流）
+        private PlayerHUD _hud;                  // 缓存本地 HUD（碰球显示 Tapped 用）
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
         {
@@ -38,6 +40,13 @@ namespace SphereRoom.Gameplay
             direction.Normalize();
 
             PushBallServerRpc(direction, new NetworkObjectReference(networkObject));
+
+            // 本地碰球提示（仅本地玩家可见）
+            if (_hud == null)
+            {
+                _hud = Object.FindFirstObjectByType<PlayerHUD>();
+            }
+            _hud?.ShowTapped();
         }
 
         /// <summary>

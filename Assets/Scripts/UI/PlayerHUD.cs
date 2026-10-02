@@ -1,3 +1,5 @@
+using System.Collections;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -26,6 +28,9 @@ namespace SphereRoom.UI
         private Toggle _crosshairToggle;
         private Toggle _helpToggle;
         private Button _resumeButton;
+        private Button _quitButton;
+        private TextMeshProUGUI _tappedText;
+        private Coroutine _tappedCoroutine;
 
         private bool _initialized;
         private bool _menuOpen;
@@ -35,7 +40,8 @@ namespace SphereRoom.UI
         /// <summary>由 HudBuilder 在运行时调用，注入所有 UI 引用与体力系统。</summary>
         public void Initialize(Image staminaFill, TextMeshProUGUI staminaText, StaminaSystem stamina,
             GameObject crosshair, GameObject helpPanel, GameObject menuPanel,
-            Toggle crosshairToggle, Toggle helpToggle, Button resumeButton)
+            Toggle crosshairToggle, Toggle helpToggle, Button resumeButton, TextMeshProUGUI tappedText,
+            Button quitButton)
         {
             _staminaFill = staminaFill;
             _staminaText = staminaText;
@@ -46,6 +52,8 @@ namespace SphereRoom.UI
             _crosshairToggle = crosshairToggle;
             _helpToggle = helpToggle;
             _resumeButton = resumeButton;
+            _tappedText = tappedText;
+            _quitButton = quitButton;
             _initialized = true;
 
             if (_stamina != null)
@@ -59,6 +67,7 @@ namespace SphereRoom.UI
             _helpToggle.isOn = _helpPanel.activeSelf;
             _helpToggle.onValueChanged.AddListener(ShowHelp);
             _resumeButton.onClick.AddListener(Resume);
+            _quitButton.onClick.AddListener(QuitGame);
         }
 
         private void Start()
@@ -105,6 +114,28 @@ namespace SphereRoom.UI
             _staminaText.text = Mathf.RoundToInt(_displayedStamina * 100f).ToString();
         }
 
+        /// <summary>碰球提示：显示「Tapped」，约 0.8 秒后自动消失。</summary>
+        public void ShowTapped()
+        {
+            if (_tappedText == null)
+            {
+                return;
+            }
+            if (_tappedCoroutine != null)
+            {
+                StopCoroutine(_tappedCoroutine);
+            }
+            _tappedCoroutine = StartCoroutine(TappedRoutine());
+        }
+
+        private IEnumerator TappedRoutine()
+        {
+            _tappedText.gameObject.SetActive(true);
+            yield return new WaitForSeconds(0.8f);
+            _tappedText.gameObject.SetActive(false);
+            _tappedCoroutine = null;
+        }
+
         private void SetMenuOpen(bool open)
         {
             _menuOpen = open;
@@ -128,6 +159,21 @@ namespace SphereRoom.UI
             SetMenuOpen(false);
         }
 
+        /// <summary>
+        /// 退出游戏：先关闭网络会话（主机关闭会通知所有客户端断开；
+        /// 编辑器/MPPM 里 Application.Quit 可能不生效，关会话能保证主机真的退出），再尝试退出应用。
+        /// </summary>
+        private void QuitGame()
+        {
+            Debug.Log("[PlayerHUD] 退出游戏");
+            NetworkManager networkManager = NetworkManager.Singleton;
+            if (networkManager != null && networkManager.IsListening)
+            {
+                networkManager.Shutdown();
+            }
+            Application.Quit();
+        }
+
         private void OnDestroy()
         {
             if (_stamina != null)
@@ -145,6 +191,10 @@ namespace SphereRoom.UI
             if (_resumeButton != null)
             {
                 _resumeButton.onClick.RemoveListener(Resume);
+            }
+            if (_quitButton != null)
+            {
+                _quitButton.onClick.RemoveListener(QuitGame);
             }
         }
     }

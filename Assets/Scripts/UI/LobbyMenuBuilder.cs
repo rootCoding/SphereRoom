@@ -76,8 +76,32 @@ namespace SphereRoom.UI
                 new Vector2(380f, 30f), new Vector2(0f, -184f));
             status.color = new Color(1f, 0.55f, 0.5f);
 
+            // ---- 主机断开对话框（居中，初始隐藏）：文本 + 「确认」按钮 ----
+            GameObject dialog = new GameObject("DisconnectDialog", typeof(RectTransform));
+            dialog.transform.SetParent(root.transform, false);
+            RectTransform dialogRt = dialog.GetComponent<RectTransform>();
+            dialogRt.anchorMin = dialogRt.anchorMax = new Vector2(0.5f, 0.5f);
+            dialogRt.sizeDelta = new Vector2(460f, 220f);
+            dialogRt.anchoredPosition = Vector2.zero;
+
+            UiFactory.CreateImage(dialogRt, "Border", new Vector2(466f, 226f), Vector2.zero,
+                new Color(0.8f, 0.4f, 0.35f, 0.6f));
+            UiFactory.CreateImage(dialogRt, "Background", new Vector2(460f, 220f), Vector2.zero,
+                new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
+
+            TextMeshProUGUI dialogText = UiFactory.CreateText(dialogRt, "Text", "主机玩家已断开连接", 28,
+                new Vector2(420f, 50f), new Vector2(0f, 35f));
+            dialogText.color = new Color(1f, 0.75f, 0.65f);
+
+            Button confirmButton = CreateButton(dialogRt, "ConfirmButton", "确认", new Vector2(0f, -55f),
+                new Color(0.25f, 0.55f, 0.95f));
+            confirmButton.GetComponent<RectTransform>().sizeDelta = new Vector2(180f, 46f);
+
+            dialog.SetActive(false);
+
             LobbyMenu menu = root.AddComponent<LobbyMenu>();
-            menu.Initialize(root, hostButton, joinButton, ipField, portField, status);
+            menu.Initialize(root, panel, dialog, hostButton, joinButton, confirmButton,
+                ipField, portField, status);
             return menu;
         }
 

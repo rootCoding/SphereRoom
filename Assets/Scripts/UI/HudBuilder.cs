@@ -74,6 +74,12 @@ namespace SphereRoom.UI
             UiFactory.CreateImage(crosshairRt, "Bar_Right", new Vector2(16f, 3f), new Vector2(10f, 0f), crossColor);
             UiFactory.CreateImage(crosshairRt, "Dot", new Vector2(4f, 4f), Vector2.zero, crossColor);
 
+            // 碰球提示「Tapped」（屏幕上方，初始隐藏，触球时短暂显示）
+            TextMeshProUGUI tappedText = UiFactory.CreateText(hudRoot.transform, "Tapped", "Tapped", 40,
+                new Vector2(300f, 60f), new Vector2(0f, -140f));
+            tappedText.color = new Color(1f, 0.85f, 0.3f);
+            tappedText.gameObject.SetActive(false);
+
             // ---- 操作说明（左下角）：WASD + Shift + Esc ----
             GameObject helpPanel = new GameObject("HelpPanel", typeof(RectTransform));
             helpPanel.transform.SetParent(hudRoot.transform, false);
@@ -95,30 +101,30 @@ namespace SphereRoom.UI
             menu.transform.SetParent(hudRoot.transform, false);
             RectTransform menuRt = menu.GetComponent<RectTransform>();
             menuRt.anchorMin = menuRt.anchorMax = new Vector2(0.5f, 0.5f);
-            menuRt.sizeDelta = new Vector2(360f, 280f);
+            menuRt.sizeDelta = new Vector2(360f, 340f);
             menuRt.anchoredPosition = Vector2.zero;
 
             // 描边底 + 面板底（先创建的在下层）
-            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 286f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 346f), Vector2.zero,
                 new Color(0.45f, 0.62f, 0.9f, 0.45f));
-            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 280f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 340f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
-            TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 108f));
+            TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 130f));
             title.color = new Color(0.88f, 0.92f, 1f);
-            UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 86f),
+            UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 106f),
                 new Color(0.45f, 0.62f, 0.9f, 0.8f));
 
-            Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 32f);
-            Toggle helpToggle = CreateMenuToggle(menuRt, "HelpToggle", "操作说明", -6f);
+            Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 48f);
+            Toggle helpToggle = CreateMenuToggle(menuRt, "HelpToggle", "操作说明", -10f);
 
             // 继续游戏按钮（悬停变亮 / 按下变暗）
             GameObject btnGo = new GameObject("ResumeButton", typeof(RectTransform));
             btnGo.transform.SetParent(menuRt, false);
             RectTransform btnRt = btnGo.GetComponent<RectTransform>();
             btnRt.anchorMin = btnRt.anchorMax = new Vector2(0.5f, 0.5f);
-            btnRt.sizeDelta = new Vector2(200f, 50f);
-            btnRt.anchoredPosition = new Vector2(0f, -92f);
+            btnRt.sizeDelta = new Vector2(200f, 46f);
+            btnRt.anchoredPosition = new Vector2(0f, -66f);
             Image btnBg = btnGo.AddComponent<Image>();
             btnBg.color = new Color(0.25f, 0.55f, 0.95f);
             Button button = btnGo.AddComponent<Button>();
@@ -130,14 +136,34 @@ namespace SphereRoom.UI
             colors.selectedColor = colors.highlightedColor;
             colors.fadeDuration = 0.08f;
             button.colors = colors;
-            UiFactory.CreateText(btnRt, "Label", "继续游戏", 24, new Vector2(200f, 50f), Vector2.zero);
+            UiFactory.CreateText(btnRt, "Label", "继续游戏", 24, new Vector2(200f, 46f), Vector2.zero);
+
+            // 退出游戏按钮（红色系）
+            GameObject quitGo = new GameObject("QuitButton", typeof(RectTransform));
+            quitGo.transform.SetParent(menuRt, false);
+            RectTransform quitRt = quitGo.GetComponent<RectTransform>();
+            quitRt.anchorMin = quitRt.anchorMax = new Vector2(0.5f, 0.5f);
+            quitRt.sizeDelta = new Vector2(200f, 44f);
+            quitRt.anchoredPosition = new Vector2(0f, -123f);
+            Image quitBg = quitGo.AddComponent<Image>();
+            quitBg.color = new Color(0.65f, 0.25f, 0.25f);
+            Button quitButton = quitGo.AddComponent<Button>();
+            quitButton.targetGraphic = quitBg;
+            ColorBlock quitColors = quitButton.colors;
+            quitColors.normalColor = new Color(0.65f, 0.25f, 0.25f);
+            quitColors.highlightedColor = new Color(0.8f, 0.35f, 0.35f);
+            quitColors.pressedColor = new Color(0.45f, 0.15f, 0.15f);
+            quitColors.selectedColor = quitColors.highlightedColor;
+            quitColors.fadeDuration = 0.08f;
+            quitButton.colors = quitColors;
+            UiFactory.CreateText(quitRt, "Label", "退出游戏", 22, new Vector2(200f, 44f), Vector2.zero);
 
             menu.SetActive(false);
 
             // ---- 接线 ----
             PlayerHUD hud = hudRoot.AddComponent<PlayerHUD>();
             hud.Initialize(staminaFill, staminaText, stamina, crosshair, helpPanel, menu,
-                crosshairToggle, helpToggle, button);
+                crosshairToggle, helpToggle, button, tappedText, quitButton);
             return hud;
         }
 

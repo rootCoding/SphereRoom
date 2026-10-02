@@ -27,8 +27,8 @@ namespace SphereRoom.EditorTools
 
             Rigidbody rigidbody = ball.AddComponent<Rigidbody>();
             rigidbody.mass = 1f;
-            rigidbody.drag = 0.1f;          // 空气阻力低：滚动更持久
-            rigidbody.angularDrag = 0.05f;
+            rigidbody.linearDamping = 0.1f;          // 空气阻力低：滚动更持久
+            rigidbody.angularDamping = 0.05f;
 
             ball.AddComponent<NetworkObject>();
             ball.AddComponent<NetworkRigidbody>(); // 主机权威，自动同步位置/速度/角速度
