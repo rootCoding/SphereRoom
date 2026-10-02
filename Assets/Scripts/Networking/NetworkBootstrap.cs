@@ -324,7 +324,9 @@ namespace SphereRoom.Networking
             if (!_connectedOnce)
             {
                 // 从未连接成功（重试 5 秒耗尽）= 连接超时 / 房间不存在
-                ConnectionStopped?.Invoke(false, "连接超时，请检查主机IP与端口是否正确");
+                ConnectionStopped?.Invoke(false, Mode == NetMode.Steam
+                    ? "连接超时，请检查主机 SteamID 是否正确"
+                    : "连接超时，请检查主机IP与端口是否正确");
             }
             else
             {

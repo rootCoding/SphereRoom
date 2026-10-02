@@ -55,6 +55,7 @@ namespace SphereRoom.Networking
         private bool _clientConnected;
         private float _nextHeartbeat;
         private float _lastPongTime;
+        private bool _disconnectFired;
 
         public override ulong ServerClientId => 0;
 
@@ -131,6 +132,10 @@ namespace SphereRoom.Networking
             _started = true;
             _isServer = false;
             _clientConnected = false;
+            _disconnectFired = false;
+            // 心跳从连接尝试阶段就开始：目标 SteamID 填错/主机未开房时 5 秒内报超时（不等 NGO 默认 30 秒）
+            _lastPongTime = Time.realtimeSinceStartup;
+            _nextHeartbeat = Time.realtimeSinceStartup + 0.5f;
             Debug.Log($"[SteamTransport] Steam 客户端连接目标主机={TargetSteamId}");
             return true;
         }
@@ -322,14 +327,9 @@ namespace SphereRoom.Networking
             }
         }
 
-        /// <summary>客户端心跳：连接后每 1 秒 PING 一次，5 秒无 PONG 判定主机已消失。</summary>
+        /// <summary>客户端心跳：每 1 秒 PING 一次，5 秒无 PONG 判定失败——连接阶段=超时，连接后=主机已消失。</summary>
         private void ClientHeartbeatTick()
         {
-            if (!_clientConnected)
-            {
-                return;
-            }
-
             float now = Time.realtimeSinceStartup;
             if (now >= _nextHeartbeat)
             {
@@ -337,9 +337,12 @@ namespace SphereRoom.Networking
                 SendControlTo(TargetSteamId, MsgPing);
             }
 
-            if (now - _lastPongTime > HeartbeatTimeout)
+            if (!_disconnectFired && now - _lastPongTime > HeartbeatTimeout)
             {
-                Debug.Log("[SteamTransport] 客户端：心跳超时，主机已消失");
+                _disconnectFired = true;
+                Debug.Log(_clientConnected
+                    ? "[SteamTransport] 客户端：心跳超时，主机已消失"
+                    : "[SteamTransport] 客户端：连接超时（5 秒未收到主机回应，请检查 SteamID）");
                 _clientConnected = false;
                 InvokeOnTransportEvent(NetworkEvent.Disconnect, ServerClientId, default, now);
             }
