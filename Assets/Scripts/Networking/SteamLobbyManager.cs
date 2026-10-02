@@ -1,5 +1,6 @@
 using System;
 using Steamworks;
+using Steamworks.Data;
 using UnityEngine;
 
 namespace SphereRoom.Networking
