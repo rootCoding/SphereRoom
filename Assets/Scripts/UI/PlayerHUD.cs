@@ -39,7 +39,9 @@ namespace SphereRoom.UI
         private TextMeshProUGUI _copyLabel;
         private TextMeshProUGUI _tappedText;
         private Coroutine _tappedCoroutine;
-        private Coroutine _noticeCoroutine;
+        private GameObject _noticeDialog;
+        private TextMeshProUGUI _noticeText;
+        private Button _noticeConfirm;
 
         private bool _initialized;
         private bool _menuOpen;
@@ -51,7 +53,8 @@ namespace SphereRoom.UI
             GameObject crosshair, GameObject helpPanel, GameObject menuPanel,
             Toggle crosshairToggle, Toggle helpToggle, Button resumeButton, TextMeshProUGUI tappedText,
             Button quitButton, Button inviteButton = null, TextMeshProUGUI lobbyIdText = null,
-            Button copyButton = null)
+            Button copyButton = null, GameObject noticeDialog = null, TextMeshProUGUI noticeText = null,
+            Button noticeConfirm = null)
         {
             _staminaFill = staminaFill;
             _staminaText = staminaText;
@@ -67,6 +70,9 @@ namespace SphereRoom.UI
             _inviteButton = inviteButton;
             _lobbyIdText = lobbyIdText;
             _copyButton = copyButton;
+            _noticeDialog = noticeDialog;
+            _noticeText = noticeText;
+            _noticeConfirm = noticeConfirm;
             if (_copyButton != null)
             {
                 _copyLabel = _copyButton.transform.Find("Label").GetComponent<TextMeshProUGUI>();
@@ -92,6 +98,10 @@ namespace SphereRoom.UI
             if (_copyButton != null)
             {
                 _copyButton.onClick.AddListener(CopyLobbyId);
+            }
+            if (_noticeConfirm != null)
+            {
+                _noticeConfirm.onClick.AddListener(CloseNoticeDialog);
             }
         }
 
@@ -189,33 +199,23 @@ namespace SphereRoom.UI
             _tappedCoroutine = null;
         }
 
-        /// <summary>屏幕上方显示一条系统提示（淡红色，3 秒后消失），如邀请面板打不开的原因。</summary>
+        /// <summary>弹出居中提示对话框（内容文本 + 「确认」按钮，点击确认关闭）。</summary>
         public void ShowNotice(string text)
         {
-            if (_tappedText == null)
+            if (_noticeDialog == null || _noticeText == null)
             {
                 return;
             }
-            if (_noticeCoroutine != null)
-            {
-                StopCoroutine(_noticeCoroutine);
-            }
-            _tappedText.text = text;
-            _tappedText.fontSize = 26;
-            _tappedText.color = new Color(1f, 0.6f, 0.5f);
-            _tappedText.gameObject.SetActive(true);
-            _noticeCoroutine = StartCoroutine(HideNoticeRoutine());
+            _noticeText.text = text;
+            _noticeDialog.SetActive(true);
         }
 
-        private IEnumerator HideNoticeRoutine()
+        private void CloseNoticeDialog()
         {
-            yield return new WaitForSeconds(3f);
-            _tappedText.gameObject.SetActive(false);
-            // 还原 Tapped 提示的样式
-            _tappedText.text = "Tapped";
-            _tappedText.fontSize = 40;
-            _tappedText.color = new Color(1f, 0.85f, 0.3f);
-            _noticeCoroutine = null;
+            if (_noticeDialog != null)
+            {
+                _noticeDialog.SetActive(false);
+            }
         }
 
         private void SetMenuOpen(bool open)
@@ -291,6 +291,10 @@ namespace SphereRoom.UI
             if (_copyButton != null)
             {
                 _copyButton.onClick.RemoveAllListeners();
+            }
+            if (_noticeConfirm != null)
+            {
+                _noticeConfirm.onClick.RemoveAllListeners();
             }
         }
     }
