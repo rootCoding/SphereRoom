@@ -25,6 +25,9 @@ namespace SphereRoom.UI
         /// <summary>点击「加入房间」（参数：输入的 IP 与端口）。</summary>
         public event Action<string, int> OnJoinClicked;
 
+        /// <summary>切换联机方式（参数：是否 Steam 模式）。</summary>
+        public event Action<bool> OnModeChanged;
+
         private GameObject _root;
         private GameObject _panel;
         private GameObject _disconnectDialog;
@@ -34,12 +37,27 @@ namespace SphereRoom.UI
         private TMP_InputField _ipField;
         private TMP_InputField _portField;
         private TextMeshProUGUI _status;
+
+        // 联机方式切换相关
+        private Button _modeButton;
+        private TextMeshProUGUI _modeButtonLabel;
+        private TextMeshProUGUI _ipLabel;
+        private TextMeshProUGUI _ipPlaceholder;
+        private GameObject _portLabelGo;
+        private TextMeshProUGUI _hostButtonLabel;
+        private TextMeshProUGUI _joinButtonLabel;
+        private bool _steamMode;
+        private string _utpIpText = "127.0.0.1";
+
         private Coroutine _forcedExitCoroutine;
         private bool _initialized;
 
         public void Initialize(GameObject root, GameObject panel, GameObject disconnectDialog,
             Button hostButton, Button joinButton, Button confirmButton,
-            TMP_InputField ipField, TMP_InputField portField, TextMeshProUGUI status)
+            TMP_InputField ipField, TMP_InputField portField, TextMeshProUGUI status,
+            Button modeButton, TextMeshProUGUI modeButtonLabel,
+            TextMeshProUGUI ipLabel, TextMeshProUGUI ipPlaceholder, GameObject portLabelGo,
+            TextMeshProUGUI hostButtonLabel, TextMeshProUGUI joinButtonLabel)
         {
             _root = root;
             _panel = panel;
@@ -50,6 +68,13 @@ namespace SphereRoom.UI
             _ipField = ipField;
             _portField = portField;
             _status = status;
+            _modeButton = modeButton;
+            _modeButtonLabel = modeButtonLabel;
+            _ipLabel = ipLabel;
+            _ipPlaceholder = ipPlaceholder;
+            _portLabelGo = portLabelGo;
+            _hostButtonLabel = hostButtonLabel;
+            _joinButtonLabel = joinButtonLabel;
             _initialized = true;
 
             _hostButton.onClick.AddListener(() =>
@@ -71,8 +96,39 @@ namespace SphereRoom.UI
                 Debug.Log("[LobbyMenu] 确认按钮被点击，立即回到主页面");
                 ForceExitToLobby();
             });
+            _modeButton.onClick.AddListener(() =>
+            {
+                Debug.Log($"[LobbyMenu] 联机方式切换：{(_steamMode ? "Steam → 局域网" : "局域网 → Steam")}");
+                _steamMode = !_steamMode;
+                ApplyModeUI();
+                OnModeChanged?.Invoke(_steamMode);
+            });
 
+            ApplyModeUI();
             Show();
+        }
+
+        /// <summary>按当前联机方式刷新大厅 UI（Steam 模式隐藏端口、输入框变主机 SteamID）。</summary>
+        private void ApplyModeUI()
+        {
+            _modeButtonLabel.text = _steamMode ? "联机方式：Steam 联机" : "联机方式：局域网直连";
+            _ipLabel.text = _steamMode ? "主机 SteamID" : "主机 IP";
+            _portLabelGo.SetActive(!_steamMode);
+            _portField.gameObject.SetActive(!_steamMode);
+            _hostButtonLabel.text = _steamMode ? "创建房间（Steam）" : "创建房间";
+            _joinButtonLabel.text = _steamMode ? "加入房间（Steam）" : "加入房间";
+            if (_steamMode)
+            {
+                // 暂存 IP 文本，切回局域网时还原
+                _utpIpText = _ipField.text;
+                _ipField.text = string.Empty;
+                _ipPlaceholder.text = "输入主机 SteamID64";
+            }
+            else
+            {
+                _ipField.text = string.IsNullOrWhiteSpace(_utpIpText) ? "127.0.0.1" : _utpIpText;
+                _ipPlaceholder.text = "例如 127.0.0.1";
+            }
         }
 
         /// <summary>主机断开：弹出对话框；点「确认」立即回主页面，不点 5 秒后自动回。</summary>

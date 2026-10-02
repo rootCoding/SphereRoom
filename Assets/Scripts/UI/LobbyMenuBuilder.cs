@@ -35,46 +35,53 @@ namespace SphereRoom.UI
             panel.transform.SetParent(root.transform, false);
             RectTransform panelRt = panel.GetComponent<RectTransform>();
             panelRt.anchorMin = panelRt.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRt.sizeDelta = new Vector2(440f, 420f);
+            panelRt.sizeDelta = new Vector2(440f, 460f);
             panelRt.anchoredPosition = Vector2.zero;
 
-            UiFactory.CreateImage(panelRt, "Border", new Vector2(446f, 426f), Vector2.zero,
+            UiFactory.CreateImage(panelRt, "Border", new Vector2(446f, 466f), Vector2.zero,
                 new Color(0.45f, 0.62f, 0.9f, 0.45f));
-            UiFactory.CreateImage(panelRt, "Background", new Vector2(440f, 420f), Vector2.zero,
+            UiFactory.CreateImage(panelRt, "Background", new Vector2(440f, 460f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
             TextMeshProUGUI title = UiFactory.CreateText(panelRt, "Title", "球体房间", 36,
-                new Vector2(300f, 50f), new Vector2(0f, 150f));
+                new Vector2(300f, 50f), new Vector2(0f, 160f));
             title.color = new Color(0.88f, 0.92f, 1f);
-            UiFactory.CreateImage(panelRt, "TitleUnderline", new Vector2(140f, 2f), new Vector2(0f, 118f),
+            UiFactory.CreateImage(panelRt, "TitleUnderline", new Vector2(140f, 2f), new Vector2(0f, 128f),
                 new Color(0.45f, 0.62f, 0.9f, 0.8f));
 
             // ---- 输入框（文字标签贴右对齐，紧挨输入框左侧）----
             TextMeshProUGUI ipLabel = UiFactory.CreateText(panelRt, "IpLabel", "主机 IP", 20,
-                new Vector2(100f, 30f), new Vector2(-116f, 36f));
+                new Vector2(100f, 30f), new Vector2(-116f, 40f));
             ipLabel.alignment = TextAlignmentOptions.MidlineRight;
             ipLabel.color = new Color(0.8f, 0.85f, 0.9f);
             TMP_InputField ipField = CreateInput(panelRt, "IpInput", "例如 127.0.0.1", "127.0.0.1",
-                new Vector2(56f, 36f), 220f);
+                new Vector2(56f, 40f), 220f);
 
             TextMeshProUGUI portLabel = UiFactory.CreateText(panelRt, "PortLabel", "端口", 20,
-                new Vector2(100f, 30f), new Vector2(-116f, -12f));
+                new Vector2(100f, 30f), new Vector2(-116f, -8f));
             portLabel.alignment = TextAlignmentOptions.MidlineRight;
             portLabel.color = new Color(0.8f, 0.85f, 0.9f);
             // 固定端口 12305（便于联机测试；若提示端口被占用，重启编辑器释放即可）
             TMP_InputField portField = CreateInput(panelRt, "PortInput", "默认 12305", "12305",
-                new Vector2(56f, -12f), 220f);
+                new Vector2(56f, -8f), 220f);
 
             // ---- 按钮 ----
-            Button hostButton = CreateButton(panelRt, "HostButton", "创建房间", new Vector2(0f, -72f),
+            Button hostButton = CreateButton(panelRt, "HostButton", "创建房间", new Vector2(0f, -68f),
                 new Color(0.25f, 0.55f, 0.95f));
-            Button joinButton = CreateButton(panelRt, "JoinButton", "加入房间", new Vector2(0f, -137f),
+            Button joinButton = CreateButton(panelRt, "JoinButton", "加入房间", new Vector2(0f, -133f),
                 new Color(0.25f, 0.6f, 0.45f));
 
             // ---- 状态提示 ----
             TextMeshProUGUI status = UiFactory.CreateText(panelRt, "Status", "", 16,
-                new Vector2(380f, 30f), new Vector2(0f, -184f));
+                new Vector2(380f, 30f), new Vector2(0f, -170f));
             status.color = new Color(1f, 0.55f, 0.5f);
+
+            // ---- 联机方式切换按钮（局域网直连 ⇄ Steam 联机）----
+            Button modeButton = CreateButton(panelRt, "ModeToggle", "联机方式：局域网直连", new Vector2(0f, -204f),
+                new Color(0.35f, 0.38f, 0.45f));
+            modeButton.GetComponent<RectTransform>().sizeDelta = new Vector2(260f, 34f);
+            TextMeshProUGUI modeButtonLabel = modeButton.transform.Find("Label").GetComponent<TextMeshProUGUI>();
+            modeButtonLabel.fontSize = 18;
 
             // ---- 主机断开对话框（居中，初始隐藏）：文本 + 「确认」按钮 ----
             GameObject dialog = new GameObject("DisconnectDialog", typeof(RectTransform));
@@ -101,7 +108,11 @@ namespace SphereRoom.UI
 
             LobbyMenu menu = root.AddComponent<LobbyMenu>();
             menu.Initialize(root, panel, dialog, hostButton, joinButton, confirmButton,
-                ipField, portField, status);
+                ipField, portField, status,
+                modeButton, modeButtonLabel,
+                ipLabel, (TextMeshProUGUI)ipField.placeholder, portLabel.gameObject,
+                hostButton.transform.Find("Label").GetComponent<TextMeshProUGUI>(),
+                joinButton.transform.Find("Label").GetComponent<TextMeshProUGUI>());
             return menu;
         }
 

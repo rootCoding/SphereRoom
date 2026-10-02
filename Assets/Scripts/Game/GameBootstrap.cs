@@ -22,6 +22,7 @@ namespace SphereRoom.Game
             _lobby = LobbyMenuBuilder.Build();
             _lobby.OnHostClicked += _network.StartHost;
             _lobby.OnJoinClicked += (ip, port) => _network.StartClient(ip, port);
+            _lobby.OnModeChanged += steam => _network.Mode = steam ? NetMode.Steam : NetMode.UTP;
             _lobby.ForcedExit += OnForcedExit;
             _network.ConnectionStopped += OnConnectionStopped;
             _network.Status += _lobby.SetStatus;

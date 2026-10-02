@@ -9,6 +9,13 @@ using SphereRoom.Player;
 
 namespace SphereRoom.Networking
 {
+    /// <summary>联机方式：局域网（Unity Transport 直连）或 Steam P2P（自写传输层）。</summary>
+    public enum NetMode
+    {
+        UTP,
+        Steam
+    }
+
     /// <summary>
     /// 网络引导器（由 GameBootstrap 运行时创建）：
     /// - 创建 NetworkManager + UnityTransport，注册玩家网络预制体（Resources/Player）
@@ -31,8 +38,12 @@ namespace SphereRoom.Networking
         /// </summary>
         private ushort _port;
 
+        /// <summary>当前联机方式（由大厅「联机方式」按钮切换）。</summary>
+        public NetMode Mode { get; set; } = NetMode.UTP;
+
         private NetworkManager _networkManager;
         private UnityTransport _transport;
+        private SteamTransport _steamTransport;
         private GameObject _playerPrefab;
         private GameObject _ballPrefab;
         private bool _connectedOnce;   // 本次连接尝试是否成功连接过（区分「超时」与「掉线」）
@@ -78,10 +89,23 @@ namespace SphereRoom.Networking
                 Status?.Invoke("玩家预制体缺失：请先运行 Tools/球体房间/生成玩家网络预制体");
                 return;
             }
-            _port = (ushort)Mathf.Clamp(port, 1024, 65535);
+            if (Mode == NetMode.Steam)
+            {
+                if (!_steamTransport.IsSteamReady)
+                {
+                    Status?.Invoke("Steam 初始化失败：请先启动 Steam 客户端");
+                    return;
+                }
+                _networkManager.NetworkConfig.NetworkTransport = _steamTransport;
+            }
+            else
+            {
+                _port = (ushort)Mathf.Clamp(port, 1024, 65535);
+                // 主机监听所有网卡（局域网内其他机器可加入）
+                _transport.SetConnectionData("0.0.0.0", _port);
+                _networkManager.NetworkConfig.NetworkTransport = _transport;
+            }
             _connectedOnce = false;
-            // 主机监听所有网卡（局域网内其他机器可加入）
-            _transport.SetConnectionData("0.0.0.0", _port);
             _networkManager.StartHost();
         }
 
@@ -98,13 +122,33 @@ namespace SphereRoom.Networking
             {
                 return;
             }
-            if (string.IsNullOrWhiteSpace(ip))
+            if (Mode == NetMode.Steam)
             {
-                ip = "127.0.0.1";
+                if (!_steamTransport.IsSteamReady)
+                {
+                    Status?.Invoke("Steam 初始化失败：请先启动 Steam 客户端");
+                    return;
+                }
+                // Steam 模式下输入框内容是主机 SteamID64
+                if (!ulong.TryParse(ip, out ulong hostSteamId) || hostSteamId == 0)
+                {
+                    Status?.Invoke("主机 SteamID 格式不正确");
+                    return;
+                }
+                _steamTransport.TargetSteamId = hostSteamId;
+                _networkManager.NetworkConfig.NetworkTransport = _steamTransport;
             }
-            _port = (ushort)Mathf.Clamp(port, 1024, 65535);
+            else
+            {
+                if (string.IsNullOrWhiteSpace(ip))
+                {
+                    ip = "127.0.0.1";
+                }
+                _port = (ushort)Mathf.Clamp(port, 1024, 65535);
+                _transport.SetConnectionData(ip, _port);
+                _networkManager.NetworkConfig.NetworkTransport = _transport;
+            }
             _connectedOnce = false;
-            _transport.SetConnectionData(ip, _port);
             _networkManager.StartClient();
         }
 
@@ -138,6 +182,8 @@ namespace SphereRoom.Networking
             _networkManager = networkGo.AddComponent<NetworkManager>();
             _networkManager.NetworkConfig = new NetworkConfig();
             _transport = networkGo.AddComponent<UnityTransport>();
+            _steamTransport = networkGo.AddComponent<SteamTransport>();
+            // 两种传输层常驻同一 NetworkManager，按 Mode 在 StartHost/StartClient 前切换
             _networkManager.NetworkConfig.NetworkTransport = _transport;
 
             // 加入房间超时控制：5 秒（1 秒 × 5 次重试）连不上即失败。
@@ -151,8 +197,16 @@ namespace SphereRoom.Networking
             _networkManager.AddNetworkPrefab(_ballPrefab);
             _networkManager.OnServerStarted += () =>
             {
-                Debug.Log($"[NetworkBootstrap] 服务器已启动，端口={_port}");
-                Status?.Invoke($"房间已创建（端口 {_port}）");
+                if (Mode == NetMode.Steam)
+                {
+                    Debug.Log($"[NetworkBootstrap] Steam 服务器已启动，本机 SteamID={_steamTransport.LocalSteamId}");
+                    Status?.Invoke($"房间已创建（Steam，我的 SteamID：{_steamTransport.LocalSteamId}）");
+                }
+                else
+                {
+                    Debug.Log($"[NetworkBootstrap] 服务器已启动，端口={_port}");
+                    Status?.Invoke($"房间已创建（端口 {_port}）");
+                }
                 SpawnSharedBall();
                 StartCoroutine(BallSpawnLoop());
             };
