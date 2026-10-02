@@ -222,11 +222,59 @@ namespace SphereRoom.UI
 
             noticeDialog.SetActive(false);
 
+            // ---- 好友列表面板（Overlay 不可用时的邀请回退：好友名 + 邀请按钮，初始隐藏）----
+            GameObject friendListPanel = new GameObject("FriendListPanel", typeof(RectTransform));
+            friendListPanel.transform.SetParent(hudRoot.transform, false);
+            RectTransform friendRt = friendListPanel.GetComponent<RectTransform>();
+            friendRt.anchorMin = friendRt.anchorMax = new Vector2(0.5f, 0.5f);
+            friendRt.sizeDelta = new Vector2(420f, 540f);
+            friendRt.anchoredPosition = Vector2.zero;
+
+            UiFactory.CreateImage(friendRt, "Border", new Vector2(426f, 546f), Vector2.zero,
+                new Color(0.45f, 0.62f, 0.9f, 0.45f));
+            UiFactory.CreateImage(friendRt, "Background", new Vector2(420f, 540f), Vector2.zero,
+                new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
+
+            TextMeshProUGUI friendTitle = UiFactory.CreateText(friendRt, "Title", "邀请 Steam 好友", 26,
+                new Vector2(300f, 40f), new Vector2(0f, 190f));
+            friendTitle.color = new Color(0.88f, 0.92f, 1f);
+
+            // 好友行容器（行由 PlayerHUD 按需动态生成）
+            GameObject rowsGo = new GameObject("Rows", typeof(RectTransform));
+            rowsGo.transform.SetParent(friendRt, false);
+            RectTransform rowsRt = rowsGo.GetComponent<RectTransform>();
+            rowsRt.anchorMin = rowsRt.anchorMax = new Vector2(0.5f, 0.5f);
+            rowsRt.sizeDelta = new Vector2(420f, 540f);
+            rowsRt.anchoredPosition = Vector2.zero;
+
+            // 关闭按钮
+            GameObject closeGo = new GameObject("CloseButton", typeof(RectTransform));
+            closeGo.transform.SetParent(friendRt, false);
+            RectTransform closeRt = closeGo.GetComponent<RectTransform>();
+            closeRt.anchorMin = closeRt.anchorMax = new Vector2(0.5f, 0.5f);
+            closeRt.sizeDelta = new Vector2(140f, 44f);
+            closeRt.anchoredPosition = new Vector2(0f, -232f);
+            Image closeBg = closeGo.AddComponent<Image>();
+            closeBg.color = new Color(0.25f, 0.55f, 0.95f);
+            Button friendCloseButton = closeGo.AddComponent<Button>();
+            friendCloseButton.targetGraphic = closeBg;
+            ColorBlock closeColors = friendCloseButton.colors;
+            closeColors.normalColor = new Color(0.25f, 0.55f, 0.95f);
+            closeColors.highlightedColor = new Color(0.38f, 0.66f, 1f);
+            closeColors.pressedColor = new Color(0.16f, 0.4f, 0.75f);
+            closeColors.selectedColor = closeColors.highlightedColor;
+            closeColors.fadeDuration = 0.08f;
+            friendCloseButton.colors = closeColors;
+            UiFactory.CreateText(closeRt, "Label", "关闭", 22, new Vector2(140f, 44f), Vector2.zero);
+
+            friendListPanel.SetActive(false);
+
             // ---- 接线 ----
             PlayerHUD hud = hudRoot.AddComponent<PlayerHUD>();
             hud.Initialize(staminaFill, staminaText, stamina, crosshair, helpPanel, menu,
                 crosshairToggle, helpToggle, button, tappedText, quitButton, inviteButton,
-                lobbyIdText, copyButton, noticeDialog, noticeText, noticeConfirm);
+                lobbyIdText, copyButton, noticeDialog, noticeText, noticeConfirm,
+                friendListPanel, rowsRt, friendCloseButton);
             return hud;
         }
 

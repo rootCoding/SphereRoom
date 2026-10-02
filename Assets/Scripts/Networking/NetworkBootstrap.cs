@@ -205,10 +205,22 @@ namespace SphereRoom.Networking
             _networkManager.StartClient();
         }
 
-        /// <summary>房主：打开 Steam 好友邀请面板（Esc 菜单「邀请 Steam 好友」按钮）。返回 null=成功，否则错误文案。</summary>
-        public string InviteFriends()
+        /// <summary>房主：尝试打开 Steam 好友邀请面板（Esc 菜单「邀请 Steam 好友」按钮）。Overlay 不可用时上层回退好友列表。</summary>
+        public InviteResult InviteFriends()
         {
-            return _lobbyManager.InviteFriends();
+            return _lobbyManager.TryOpenInviteOverlay();
+        }
+
+        /// <summary>直接邀请指定 Steam 好友（游戏内好友列表路径）。返回 null=成功，否则错误文案。</summary>
+        public string InviteFriend(ulong steamId)
+        {
+            return _lobbyManager.InviteFriend(steamId);
+        }
+
+        /// <summary>在线 Steam 好友列表（游戏内好友列表路径）。</summary>
+        public List<(string Name, ulong SteamId)> GetOnlineFriends()
+        {
+            return _lobbyManager.GetOnlineFriends();
         }
 
         /// <summary>缓存出生点（按层级顺序），初始全部禁用。</summary>

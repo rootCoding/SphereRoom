@@ -5,6 +5,15 @@ using UnityEngine;
 
 namespace SphereRoom.Networking
 {
+    /// <summary>打开邀请面板的结果。</summary>
+    public enum InviteResult
+    {
+        Ok,               // Overlay 邀请面板已打开
+        OverlayDisabled,  // 游戏内界面未启用 → 回退到游戏内好友列表邀请
+        NoLobby,          // 尚未创建大厅
+        SteamUnavailable  // Steam 未初始化
+    }
+
     /// <summary>
     /// Steam 大厅管理（超级加分项「Steam 联机」的入口层）：
     /// 大厅只解决「怎么找到对方」——创建大厅 / 大厅 ID 加入 / 邀请好友 / 接受邀请自动加入；
@@ -115,27 +124,59 @@ namespace SphereRoom.Networking
         }
 
         /// <summary>
-        /// 房主：打开 Steam 好友邀请面板（被邀人点「接受邀请」会自动进入本房间）。
-        /// 返回 null 表示成功；否则返回错误文案（由 HUD 显示）。
+        /// 房主：尝试打开 Steam 好友邀请面板（Overlay）。
+        /// 编辑器里 Steam Overlay 常常注入失败（IsOverlayEnabled=false）——
+        /// 此时返回 OverlayDisabled，由上层回退到「游戏内好友列表」直接邀请（不依赖 Overlay）。
         /// </summary>
-        public string InviteFriends()
+        public InviteResult TryOpenInviteOverlay()
         {
             if (!EnsureSteamReady())
             {
-                return "Steam 初始化失败：请先启动 Steam 客户端";
+                return InviteResult.SteamUnavailable;
             }
+            if (!CurrentLobby.HasValue)
+            {
+                return InviteResult.NoLobby;
+            }
+            if (!SteamUtils.IsOverlayEnabled)
+            {
+                Debug.LogWarning("[SteamLobby] Steam 游戏内界面（Overlay）未启用，回退到游戏内好友列表邀请");
+                return InviteResult.OverlayDisabled;
+            }
+            SteamFriends.OpenGameInviteOverlay(CurrentLobby.Value.Id);
+            Debug.Log($"[SteamLobby] 已请求打开好友邀请面板，大厅 ID={CurrentLobby.Value.Id}");
+            return InviteResult.Ok;
+        }
+
+        /// <summary>直接邀请指定 Steam 好友（好友在 Steam 聊天收到邀请，接受后自动进入本房间）。返回 null=成功。</summary>
+        public string InviteFriend(ulong steamId)
+        {
             if (!CurrentLobby.HasValue)
             {
                 return "尚未创建 Steam 大厅";
             }
-            if (!SteamUtils.IsOverlayEnabled)
+            bool ok = CurrentLobby.Value.InviteFriend((SteamId)steamId);
+            Debug.Log($"[SteamLobby] 邀请好友 SteamID={steamId}：{(ok ? "邀请已发送" : "发送失败")}");
+            return ok ? null : "邀请发送失败，请重试";
+        }
+
+        /// <summary>获取在线 Steam 好友（名字 + SteamId，按名字排序），用于游戏内好友列表邀请。</summary>
+        public List<(string Name, ulong SteamId)> GetOnlineFriends()
+        {
+            var result = new List<(string, ulong)>();
+            if (!SteamClient.IsValid)
             {
-                Debug.LogWarning("[SteamLobby] Steam 游戏内界面（Overlay）未启用，无法打开好友邀请面板");
-                return "无法打开邀请面板\n请在 Steam 设置 →「游戏中」里\n勾选「在游戏中启用 Steam 界面」";
+                return result;
             }
-            SteamFriends.OpenGameInviteOverlay(CurrentLobby.Value.Id);
-            Debug.Log($"[SteamLobby] 已请求打开好友邀请面板，大厅 ID={CurrentLobby.Value.Id}");
-            return null;
+            foreach (Friend friend in SteamFriends.GetFriends())
+            {
+                if (friend.IsOnline)
+                {
+                    result.Add((friend.Name, friend.Id.Value));
+                }
+            }
+            result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+            return result;
         }
 
         /// <summary>Steam 聊天里接受好友邀请 → 上报房主 SteamId（由 NetworkBootstrap 自动连接加入）。</summary>

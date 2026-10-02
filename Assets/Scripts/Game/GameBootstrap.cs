@@ -42,10 +42,26 @@ namespace SphereRoom.Game
             _hud = HudBuilder.Build(stamina, steamMode);
             _hud.InviteClicked += () =>
             {
-                string error = _network.InviteFriends();
-                if (!string.IsNullOrEmpty(error))
+                InviteResult result = _network.InviteFriends();
+                switch (result)
                 {
-                    _hud.ShowNotice(error);
+                    case InviteResult.OverlayDisabled:
+                        // Overlay 注入失败（编辑器常见）→ 回退到游戏内好友列表直接邀请
+                        _hud.ShowFriendList(_network.GetOnlineFriends(), steamId =>
+                        {
+                            string error = _network.InviteFriend(steamId);
+                            if (!string.IsNullOrEmpty(error))
+                            {
+                                _hud.ShowNotice(error);
+                            }
+                        });
+                        break;
+                    case InviteResult.NoLobby:
+                        _hud.ShowNotice("尚未创建 Steam 大厅");
+                        break;
+                    case InviteResult.SteamUnavailable:
+                        _hud.ShowNotice("Steam 初始化失败：请先启动 Steam 客户端");
+                        break;
                 }
             };
             if (steamMode)
