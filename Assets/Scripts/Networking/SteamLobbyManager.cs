@@ -131,7 +131,7 @@ namespace SphereRoom.Networking
             if (!SteamUtils.IsOverlayEnabled)
             {
                 Debug.LogWarning("[SteamLobby] Steam 游戏内界面（Overlay）未启用，无法打开好友邀请面板");
-                return "无法打开邀请面板：请在 Steam 设置 →「游戏中」里勾选「在游戏中启用 Steam 界面」";
+                return "无法打开邀请面板\n请在 Steam 设置 →「游戏中」里\n勾选「在游戏中启用 Steam 界面」";
             }
             SteamFriends.OpenGameInviteOverlay(CurrentLobby.Value.Id);
             Debug.Log($"[SteamLobby] 已请求打开好友邀请面板，大厅 ID={CurrentLobby.Value.Id}");

@@ -195,9 +195,10 @@ namespace SphereRoom.UI
             UiFactory.CreateImage(noticeRt, "Background", new Vector2(560f, 200f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
-            TextMeshProUGUI noticeText = UiFactory.CreateText(noticeRt, "Text", "", 22,
-                new Vector2(520f, 84f), new Vector2(0f, 22f));
+            TextMeshProUGUI noticeText = UiFactory.CreateText(noticeRt, "Text", "", 20,
+                new Vector2(520f, 100f), new Vector2(0f, 18f));
             noticeText.alignment = TextAlignmentOptions.Midline;
+            noticeText.enableWordWrapping = true;
             noticeText.color = new Color(1f, 0.75f, 0.65f);
 
             GameObject confirmGo = new GameObject("NoticeConfirmButton", typeof(RectTransform));
