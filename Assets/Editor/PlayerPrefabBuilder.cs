@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Netcode.Components;
+using SphereRoom.Gameplay;
 using SphereRoom.Player;
 
 namespace SphereRoom.EditorTools
@@ -40,6 +41,7 @@ namespace SphereRoom.EditorTools
             networkTransform.AuthorityMode = NetworkTransform.AuthorityModes.Owner;
 
             player.AddComponent<LocalPlayerSetup>();
+            player.AddComponent<BallPusher>();
 
             // 可视胶囊（略小于控制器，避免视觉穿墙）
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);

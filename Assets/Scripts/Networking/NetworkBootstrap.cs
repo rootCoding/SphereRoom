@@ -33,6 +33,7 @@ namespace SphereRoom.Networking
         private NetworkManager _networkManager;
         private UnityTransport _transport;
         private GameObject _playerPrefab;
+        private GameObject _ballPrefab;
         private bool _connectedOnce;   // 本次连接尝试是否成功连接过（区分「超时」与「掉线」）
         private readonly List<PlayerSpawnPoint> _spawnPoints = new List<PlayerSpawnPoint>();
         private int _nextSpawnIndex;
@@ -122,6 +123,12 @@ namespace SphereRoom.Networking
                 Debug.LogError("[NetworkBootstrap] 未找到 Resources/Player.prefab，请先运行 Tools/球体房间/生成玩家网络预制体。");
             }
 
+            _ballPrefab = Resources.Load<GameObject>("Ball");
+            if (_ballPrefab == null)
+            {
+                Debug.LogError("[NetworkBootstrap] 未找到 Resources/Ball.prefab，请先运行 Tools/球体房间/生成物理球预制体。");
+            }
+
             // NGO 要求 NetworkManager 位于场景根（不能嵌套在其他物体下）
             GameObject networkGo = new GameObject("NetworkManager");
             networkGo.transform.SetParent(null);
@@ -138,10 +145,12 @@ namespace SphereRoom.Networking
             _transport.MaxConnectAttempts = 5;
 
             _networkManager.AddNetworkPrefab(_playerPrefab);
+            _networkManager.AddNetworkPrefab(_ballPrefab);
             _networkManager.OnServerStarted += () =>
             {
                 Debug.Log($"[NetworkBootstrap] 服务器已启动，端口={_port}");
                 Status?.Invoke($"房间已创建（端口 {_port}）");
+                SpawnSharedBall();
             };
             _networkManager.OnTransportFailure += () =>
             {
@@ -167,6 +176,22 @@ namespace SphereRoom.Networking
             int spawnIndex = _nextSpawnIndex++;
             SpawnPlayerFor(clientId, spawnIndex);
             UpdateSpawnPointVisibility();
+        }
+
+        /// <summary>主机在房间中央生成共享物理球（主机权威物理，位置/速度自动同步给所有客户端）。</summary>
+        private void SpawnSharedBall()
+        {
+            if (_ballPrefab == null)
+            {
+                Debug.LogError("[NetworkBootstrap] 球体预制体缺失，无法生成共享球。");
+                return;
+            }
+
+            NetworkObject.InstantiateAndSpawn(_ballPrefab, _networkManager,
+                ownerClientId: NetworkManager.ServerClientId,
+                position: new Vector3(0f, 0.5f, 0f),
+                rotation: Quaternion.identity);
+            Debug.Log("[NetworkBootstrap] 共享物理球已生成（房间中央）");
         }
 
         private void SpawnPlayerFor(ulong clientId, int spawnIndex)
