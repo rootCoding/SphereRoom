@@ -101,13 +101,13 @@ namespace SphereRoom.UI
             menu.transform.SetParent(hudRoot.transform, false);
             RectTransform menuRt = menu.GetComponent<RectTransform>();
             menuRt.anchorMin = menuRt.anchorMax = new Vector2(0.5f, 0.5f);
-            menuRt.sizeDelta = new Vector2(360f, 470f);
+            menuRt.sizeDelta = new Vector2(380f, 470f);
             menuRt.anchoredPosition = Vector2.zero;
 
             // 描边底 + 面板底（先创建的在下层）
-            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 476f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Border", new Vector2(386f, 476f), Vector2.zero,
                 new Color(0.45f, 0.62f, 0.9f, 0.45f));
-            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 470f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Background", new Vector2(380f, 470f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
             TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 150f));
@@ -161,20 +161,20 @@ namespace SphereRoom.UI
             // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板），位于「继续游戏」上方
             Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
 
-            // 大厅 ID 行（仅 Steam 联机模式显示）：只读展示框 + 左侧描述「大厅ID：」 + 右侧纯数字，再右边「复制」按钮
+            // 大厅 ID 行（仅 Steam 联机模式显示）：仿大厅页样式——框外右侧对齐的描述「大厅ID」+ 框内纯数字 + 「复制」按钮
             TextMeshProUGUI lobbyIdText = null;
             Button copyButton = null;
             if (showSteamInvite)
             {
-                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(250f, 34f), new Vector2(-45f, 88f),
+                TextMeshProUGUI lobbyIdLabel = UiFactory.CreateText(menuRt, "LobbyIdLabel", "大厅ID", 14,
+                    new Vector2(60f, 34f), new Vector2(-141f, 88f));
+                lobbyIdLabel.alignment = TextAlignmentOptions.MidlineRight;
+                lobbyIdLabel.color = new Color(0.8f, 0.85f, 0.9f);
+                UiFactory.CreateImage(menuRt, "LobbyIdBg", new Vector2(202f, 34f), new Vector2(-64f, 88f),
                     new Color(0f, 0f, 0f, 0.45f));
-                TextMeshProUGUI lobbyIdLabel = UiFactory.CreateText(menuRt, "LobbyIdLabel", "大厅ID：", 14,
-                    new Vector2(80f, 34f), new Vector2(-125f, 88f));
-                lobbyIdLabel.alignment = TextAlignmentOptions.MidlineLeft;
-                lobbyIdLabel.color = new Color(0.7f, 0.78f, 0.85f);
-                // 纯数字文本（复制时只复制这里的内容，不带「大厅ID：」前缀）
+                // 纯数字文本（复制时只复制这里的内容）
                 lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "", 14,
-                    new Vector2(150f, 34f), new Vector2(5f, 88f));
+                    new Vector2(186f, 34f), new Vector2(-64f, 88f));
                 lobbyIdText.alignment = TextAlignmentOptions.MidlineLeft;
                 lobbyIdText.color = new Color(0.9f, 0.93f, 0.96f);
                 copyButton = CreateCopyButton(menuRt, new Vector2(128f, 88f));
