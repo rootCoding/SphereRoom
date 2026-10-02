@@ -65,11 +65,13 @@ namespace SphereRoom.UI
             TMP_InputField portField = CreateInput(panelRt, "PortInput", "默认 12305", "12305",
                 new Vector2(56f, -8f), 220f);
 
-            // ---- 按钮 ----
+            // ---- 按钮（加宽以容纳 Steam 模式的长文案「创建房间（Steam）」）----
             Button hostButton = CreateButton(panelRt, "HostButton", "创建房间", new Vector2(0f, -68f),
                 new Color(0.25f, 0.55f, 0.95f));
+            hostButton.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 50f);
             Button joinButton = CreateButton(panelRt, "JoinButton", "加入房间", new Vector2(0f, -133f),
                 new Color(0.25f, 0.6f, 0.45f));
+            joinButton.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 50f);
 
             // ---- 状态提示 ----
             TextMeshProUGUI status = UiFactory.CreateText(panelRt, "Status", "", 16,

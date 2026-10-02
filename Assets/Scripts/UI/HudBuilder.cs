@@ -101,13 +101,13 @@ namespace SphereRoom.UI
             menu.transform.SetParent(hudRoot.transform, false);
             RectTransform menuRt = menu.GetComponent<RectTransform>();
             menuRt.anchorMin = menuRt.anchorMax = new Vector2(0.5f, 0.5f);
-            menuRt.sizeDelta = new Vector2(360f, 430f);
+            menuRt.sizeDelta = new Vector2(360f, 470f);
             menuRt.anchoredPosition = Vector2.zero;
 
             // 描边底 + 面板底（先创建的在下层）
-            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 436f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Border", new Vector2(366f, 476f), Vector2.zero,
                 new Color(0.45f, 0.62f, 0.9f, 0.45f));
-            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 430f), Vector2.zero,
+            UiFactory.CreateImage(menuRt, "Background", new Vector2(360f, 470f), Vector2.zero,
                 new Color(0.09f, 0.1f, 0.14f, 0.97f), raycast: true);
 
             TextMeshProUGUI title = UiFactory.CreateText(menuRt, "Title", "菜单", 32, new Vector2(200f, 44f), new Vector2(0f, 150f));
@@ -115,8 +115,8 @@ namespace SphereRoom.UI
             UiFactory.CreateImage(menuRt, "TitleUnderline", new Vector2(120f, 2f), new Vector2(0f, 126f),
                 new Color(0.45f, 0.62f, 0.9f, 0.8f));
 
-            Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 48f);
-            Toggle helpToggle = CreateMenuToggle(menuRt, "HelpToggle", "操作说明", -10f);
+            Toggle crosshairToggle = CreateMenuToggle(menuRt, "CrosshairToggle", "准星", 32f);
+            Toggle helpToggle = CreateMenuToggle(menuRt, "HelpToggle", "操作说明", -26f);
 
             // 继续游戏按钮（悬停变亮 / 按下变暗）
             GameObject btnGo = new GameObject("ResumeButton", typeof(RectTransform));
@@ -124,7 +124,7 @@ namespace SphereRoom.UI
             RectTransform btnRt = btnGo.GetComponent<RectTransform>();
             btnRt.anchorMin = btnRt.anchorMax = new Vector2(0.5f, 0.5f);
             btnRt.sizeDelta = new Vector2(200f, 46f);
-            btnRt.anchoredPosition = new Vector2(0f, -66f);
+            btnRt.anchoredPosition = new Vector2(0f, -140f);
             Image btnBg = btnGo.AddComponent<Image>();
             btnBg.color = new Color(0.25f, 0.55f, 0.95f);
             Button button = btnGo.AddComponent<Button>();
@@ -144,7 +144,7 @@ namespace SphereRoom.UI
             RectTransform quitRt = quitGo.GetComponent<RectTransform>();
             quitRt.anchorMin = quitRt.anchorMax = new Vector2(0.5f, 0.5f);
             quitRt.sizeDelta = new Vector2(200f, 44f);
-            quitRt.anchoredPosition = new Vector2(0f, -123f);
+            quitRt.anchoredPosition = new Vector2(0f, -197f);
             Image quitBg = quitGo.AddComponent<Image>();
             quitBg.color = new Color(0.65f, 0.25f, 0.25f);
             Button quitButton = quitGo.AddComponent<Button>();
@@ -158,15 +158,28 @@ namespace SphereRoom.UI
             quitButton.colors = quitColors;
             UiFactory.CreateText(quitRt, "Label", "退出游戏", 22, new Vector2(200f, 44f), Vector2.zero);
 
-            // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板）
+            // 邀请 Steam 好友按钮（仅 Steam 联机模式显示，打开 Steam 好友邀请面板），位于「继续游戏」上方
             Button inviteButton = CreateSteamInviteButton(menuRt, showSteamInvite);
+
+            // 大厅 ID 行（仅 Steam 联机模式显示）：左侧大厅 ID + 右侧「复制」按钮
+            TextMeshProUGUI lobbyIdText = null;
+            Button copyButton = null;
+            if (showSteamInvite)
+            {
+                lobbyIdText = UiFactory.CreateText(menuRt, "LobbyIdText", "大厅 ID：", 16,
+                    new Vector2(230f, 34f), new Vector2(-45f, 88f));
+                lobbyIdText.alignment = TextAlignmentOptions.MidlineLeft;
+                lobbyIdText.color = new Color(0.9f, 0.93f, 0.96f);
+                copyButton = CreateCopyButton(menuRt, new Vector2(125f, 88f));
+            }
 
             menu.SetActive(false);
 
             // ---- 接线 ----
             PlayerHUD hud = hudRoot.AddComponent<PlayerHUD>();
             hud.Initialize(staminaFill, staminaText, stamina, crosshair, helpPanel, menu,
-                crosshairToggle, helpToggle, button, tappedText, quitButton, inviteButton);
+                crosshairToggle, helpToggle, button, tappedText, quitButton, inviteButton,
+                lobbyIdText, copyButton);
             return hud;
         }
 
@@ -193,7 +206,7 @@ namespace SphereRoom.UI
             desc.alignment = TextAlignmentOptions.MidlineLeft;
         }
 
-        /// <summary>「邀请 Steam 好友」按钮（绿色系，Steam 模式才激活，位于退出按钮下方）。</summary>
+        /// <summary>「邀请 Steam 好友」按钮（绿色系，Steam 模式才激活，位于「继续游戏」上方）。</summary>
         private static Button CreateSteamInviteButton(Transform parent, bool showSteamInvite)
         {
             GameObject inviteGo = new GameObject("SteamInviteButton", typeof(RectTransform));
@@ -201,7 +214,7 @@ namespace SphereRoom.UI
             RectTransform inviteRt = inviteGo.GetComponent<RectTransform>();
             inviteRt.anchorMin = inviteRt.anchorMax = new Vector2(0.5f, 0.5f);
             inviteRt.sizeDelta = new Vector2(200f, 44f);
-            inviteRt.anchoredPosition = new Vector2(0f, -178f);
+            inviteRt.anchoredPosition = new Vector2(0f, -84f);
             Image inviteBg = inviteGo.AddComponent<Image>();
             inviteBg.color = new Color(0.25f, 0.5f, 0.35f);
             Button inviteButton = inviteGo.AddComponent<Button>();
@@ -216,6 +229,30 @@ namespace SphereRoom.UI
             UiFactory.CreateText(inviteRt, "Label", "邀请 Steam 好友", 20, new Vector2(200f, 44f), Vector2.zero);
             inviteGo.SetActive(showSteamInvite);
             return inviteButton;
+        }
+
+        /// <summary>「复制」按钮（大厅 ID 行右侧）。</summary>
+        private static Button CreateCopyButton(Transform parent, Vector2 anchoredPosition)
+        {
+            GameObject copyGo = new GameObject("CopyButton", typeof(RectTransform));
+            copyGo.transform.SetParent(parent, false);
+            RectTransform copyRt = copyGo.GetComponent<RectTransform>();
+            copyRt.anchorMin = copyRt.anchorMax = new Vector2(0.5f, 0.5f);
+            copyRt.sizeDelta = new Vector2(90f, 34f);
+            copyRt.anchoredPosition = anchoredPosition;
+            Image copyBg = copyGo.AddComponent<Image>();
+            copyBg.color = new Color(0.3f, 0.42f, 0.6f);
+            Button copyButton = copyGo.AddComponent<Button>();
+            copyButton.targetGraphic = copyBg;
+            ColorBlock copyColors = copyButton.colors;
+            copyColors.normalColor = new Color(0.3f, 0.42f, 0.6f);
+            copyColors.highlightedColor = new Color(0.42f, 0.55f, 0.75f);
+            copyColors.pressedColor = new Color(0.2f, 0.3f, 0.45f);
+            copyColors.selectedColor = copyColors.highlightedColor;
+            copyColors.fadeDuration = 0.08f;
+            copyButton.colors = copyColors;
+            UiFactory.CreateText(copyRt, "Label", "复制", 18, new Vector2(90f, 34f), Vector2.zero);
+            return copyButton;
         }
 
         /// <summary>创建菜单开关行（勾选框 + 标签），返回 Toggle。</summary>

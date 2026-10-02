@@ -38,8 +38,13 @@ namespace SphereRoom.Game
                 Destroy(_hud.gameObject);
             }
             _lobby.Hide();
-            _hud = HudBuilder.Build(stamina, _network.Mode == NetMode.Steam);
+            bool steamMode = _network.Mode == NetMode.Steam;
+            _hud = HudBuilder.Build(stamina, steamMode);
             _hud.InviteClicked += () => _network.InviteFriends();
+            if (steamMode)
+            {
+                _hud.SetLobbyId(_network.CurrentLobbyId?.ToString() ?? string.Empty);
+            }
         }
 
         private void OnConnectionStopped(bool byHost, string message)

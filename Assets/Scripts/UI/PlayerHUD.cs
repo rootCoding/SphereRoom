@@ -34,6 +34,10 @@ namespace SphereRoom.UI
         private Button _resumeButton;
         private Button _quitButton;
         private Button _inviteButton;
+        private TextMeshProUGUI _lobbyIdText;
+        private Button _copyButton;
+        private TextMeshProUGUI _copyLabel;
+        private Coroutine _copyCoroutine;
         private TextMeshProUGUI _tappedText;
         private Coroutine _tappedCoroutine;
 
@@ -46,7 +50,8 @@ namespace SphereRoom.UI
         public void Initialize(Image staminaFill, TextMeshProUGUI staminaText, StaminaSystem stamina,
             GameObject crosshair, GameObject helpPanel, GameObject menuPanel,
             Toggle crosshairToggle, Toggle helpToggle, Button resumeButton, TextMeshProUGUI tappedText,
-            Button quitButton, Button inviteButton = null)
+            Button quitButton, Button inviteButton = null, TextMeshProUGUI lobbyIdText = null,
+            Button copyButton = null)
         {
             _staminaFill = staminaFill;
             _staminaText = staminaText;
@@ -60,6 +65,12 @@ namespace SphereRoom.UI
             _tappedText = tappedText;
             _quitButton = quitButton;
             _inviteButton = inviteButton;
+            _lobbyIdText = lobbyIdText;
+            _copyButton = copyButton;
+            if (_copyButton != null)
+            {
+                _copyLabel = _copyButton.transform.Find("Label").GetComponent<TextMeshProUGUI>();
+            }
             _initialized = true;
 
             if (_stamina != null)
@@ -78,6 +89,50 @@ namespace SphereRoom.UI
             {
                 _inviteButton.onClick.AddListener(() => InviteClicked?.Invoke());
             }
+            if (_copyButton != null)
+            {
+                _copyButton.onClick.AddListener(CopyLobbyId);
+            }
+        }
+
+        /// <summary>设置 Esc 菜单显示的 Steam 大厅 ID（GameBootstrap 在本地玩家就绪时调用）。</summary>
+        public void SetLobbyId(string lobbyId)
+        {
+            if (_lobbyIdText != null)
+            {
+                _lobbyIdText.text = lobbyId;
+            }
+        }
+
+        /// <summary>复制大厅 ID 到剪贴板，按钮短暂显示「已复制」。</summary>
+        private void CopyLobbyId()
+        {
+            string id = _lobbyIdText != null ? _lobbyIdText.text : string.Empty;
+            if (string.IsNullOrEmpty(id))
+            {
+                return;
+            }
+            GUIUtility.systemCopyBuffer = id;
+            Debug.Log($"[PlayerHUD] 大厅 ID 已复制：{id}");
+            if (_copyCoroutine != null)
+            {
+                StopCoroutine(_copyCoroutine);
+            }
+            _copyCoroutine = StartCoroutine(CopyFeedbackRoutine());
+        }
+
+        private IEnumerator CopyFeedbackRoutine()
+        {
+            if (_copyLabel != null)
+            {
+                _copyLabel.text = "已复制";
+            }
+            yield return new WaitForSeconds(1f);
+            if (_copyLabel != null)
+            {
+                _copyLabel.text = "复制";
+            }
+            _copyCoroutine = null;
         }
 
         private void Start()
@@ -209,6 +264,10 @@ namespace SphereRoom.UI
             if (_inviteButton != null)
             {
                 _inviteButton.onClick.RemoveAllListeners();
+            }
+            if (_copyButton != null)
+            {
+                _copyButton.onClick.RemoveAllListeners();
             }
         }
     }

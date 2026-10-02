@@ -37,6 +37,9 @@ namespace SphereRoom.Networking
         /// <summary>当前是否在联机会话中。</summary>
         public bool IsListening => _networkManager != null && _networkManager.IsListening;
 
+        /// <summary>当前 Steam 大厅 ID（Esc 菜单显示与复制用）。</summary>
+        public ulong? CurrentLobbyId => _lobbyManager?.CurrentLobbyId;
+
         /// <summary>
         /// 本次会话使用的端口。
         /// 编辑器里 UnityTransport 退出 Play 后可能不释放端口（已知问题），
