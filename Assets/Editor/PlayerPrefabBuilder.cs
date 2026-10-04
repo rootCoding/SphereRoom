@@ -8,16 +8,23 @@ using SphereRoom.Player;
 namespace SphereRoom.EditorTools
 {
     /// <summary>
-    /// 生成玩家网络预制体到 Assets/Resources/Player.prefab（运行时由 NetworkBootstrap 加载并注册到 NGO）。
+    /// 【模块】生成玩家网络预制体到 Assets/Resources/Player.prefab（运行时由 NetworkBootstrap 加载并注册到 NGO）。
+    ///
     /// 结构：Player（CharacterController + StaminaSystem + FirstPersonController + NetworkObject
     ///            + NetworkTransform(Owner 权威) + LocalPlayerSetup）
     ///        └─ Body 可视胶囊（无碰撞体，碰撞交给 CharacterController）
+    ///
     /// 相机不放在预制体里：由 LocalPlayerSetup 在「本地玩家」生成后把场景主相机挂上，
     /// 保证只有本地玩家是第一人称视角，其他玩家实例只是可见的胶囊人。
+    ///
     /// 菜单：Tools/球体房间/生成玩家网络预制体（幂等覆盖；玩家结构变化时重跑一次即可）。
     /// </summary>
     public static class PlayerPrefabBuilder
     {
+        /// <summary>
+        /// 菜单入口：生成/覆盖玩家网络预制体。
+        /// 执行流程：建根物体 → 挂移动/体力组件 → 挂网络组件 → 建可视胶囊 → 存预制体。
+        /// </summary>
         [MenuItem("Tools/球体房间/生成玩家网络预制体")]
         public static void Build()
         {
@@ -27,11 +34,13 @@ namespace SphereRoom.EditorTools
             // 编辑器里 AddComponent 不会触发 Awake，保持激活构建是安全的。
             GameObject player = new GameObject("Player");
 
+            // 第一人称角色碰撞：身高 1.8、半径 0.4，胶囊中心 0.9（贴地）
             CharacterController controller = player.AddComponent<CharacterController>();
             controller.height = 1.8f;
             controller.radius = 0.4f;
             controller.center = new Vector3(0f, 0.9f, 0f);
 
+            // 玩法组件：体力系统 + 第一人称控制（网络模式只在 owner 上生效）
             player.AddComponent<StaminaSystem>();
             player.AddComponent<FirstPersonController>();
             player.AddComponent<NetworkObject>();
@@ -40,10 +49,11 @@ namespace SphereRoom.EditorTools
             NetworkTransform networkTransform = player.AddComponent<NetworkTransform>();
             networkTransform.AuthorityMode = NetworkTransform.AuthorityModes.Owner;
 
+            // 本地玩家初始化（挂相机 + 通知构建 HUD）与推球交互（ServerRpc 上报主机）
             player.AddComponent<LocalPlayerSetup>();
             player.AddComponent<BallPusher>();
 
-            // 可视胶囊（略小于控制器，避免视觉穿墙）
+            // 可视胶囊（略小于控制器，避免视觉穿墙）；无碰撞体——碰撞完全交给 CharacterController
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
             body.transform.SetParent(player.transform);
@@ -51,12 +61,15 @@ namespace SphereRoom.EditorTools
             body.transform.localScale = new Vector3(1f, 0.9f, 1f);
             body.GetComponent<Renderer>().sharedMaterial =
                 EditorMaterialHelper.GetOrCreateMaterial(new Color(0.3f, 0.55f, 0.9f), "Player");
+            // 胶囊自带碰撞体会与 CharacterController 互相干扰，必须移除
             Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
 
+            // Resources 目录不存在则创建（Resources.Load 依赖该目录）
             if (!AssetDatabase.IsValidFolder("Assets/Resources"))
             {
                 AssetDatabase.CreateFolder("Assets", "Resources");
             }
+            // 保存预制体后销毁临时场景物体（幂等覆盖）
             PrefabUtility.SaveAsPrefabAsset(player, "Assets/Resources/Player.prefab");
             Object.DestroyImmediate(player);
             AssetDatabase.SaveAssets();

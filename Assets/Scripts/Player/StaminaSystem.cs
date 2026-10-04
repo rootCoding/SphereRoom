@@ -22,14 +22,22 @@ namespace SphereRoom.Player
         /// <summary>体力是否耗尽（耗尽时无法冲刺）。</summary>
         public bool IsDepleted => Normalized <= 0f;
 
-        /// <summary>按帧结算体力：按住 Shift 消耗，松开恢复。</summary>
+        /// <summary>
+        /// 按帧结算体力：按住 Shift 消耗，松开恢复。
+        /// 用「时长等分」计算——deltaTime / 总时长 就是本帧应变化的比例，
+        /// 帧率波动时体力速度依然恒定（不会因为帧率高消耗快）。
+        /// </summary>
+        /// <param name="shiftHeld">本帧是否按住 Shift 键（由控制器传入按键状态）</param>
+        /// <param name="deltaTime">本帧间隔秒数</param>
         public void Tick(bool shiftHeld, float deltaTime)
         {
             float previous = Normalized;
+            // 消耗与恢复都夹在 0~1 区间内，不会出现负数或溢出
             Normalized = shiftHeld
                 ? Mathf.Max(0f, Normalized - deltaTime / drainDuration)
                 : Mathf.Min(1f, Normalized + deltaTime / regenDuration);
 
+            // 只有数值真正变化才发事件（Approximately 容忍浮点误差），避免 UI 每帧空刷
             if (!Mathf.Approximately(previous, Normalized))
             {
                 Changed?.Invoke(Normalized);
